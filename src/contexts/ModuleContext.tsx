@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-import type { Module, SubView } from '@/types/qms';
+
+export type Module = 'rnc' | 'risk';
+export type SubView = 'inicio' | 'consultas' | 'visao-geral';
 
 interface ModuleContextType {
   activeModule: Module;
@@ -10,6 +12,10 @@ interface ModuleContextType {
   setShowRNCForm: (show: boolean) => void;
   showRiskForm: boolean;
   setShowRiskForm: (show: boolean) => void;
+  selectedRNCId: string | null;
+  setSelectedRNCId: (id: string | null) => void;
+  showAdminPanel: boolean;
+  setShowAdminPanel: (show: boolean) => void;
 }
 
 const ModuleContext = createContext<ModuleContextType | null>(null);
@@ -19,6 +25,8 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveView] = useState<SubView>('inicio');
   const [showRNCForm, setShowRNCForm] = useState(false);
   const [showRiskForm, setShowRiskForm] = useState(false);
+  const [selectedRNCId, setSelectedRNCId] = useState<string | null>(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   return (
     <ModuleContext.Provider value={{
@@ -26,6 +34,8 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
       activeView, setActiveView,
       showRNCForm, setShowRNCForm,
       showRiskForm, setShowRiskForm,
+      selectedRNCId, setSelectedRNCId,
+      showAdminPanel, setShowAdminPanel,
     }}>
       {children}
     </ModuleContext.Provider>

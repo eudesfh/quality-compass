@@ -6,32 +6,152 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useModule } from '@/contexts/ModuleContext';
-import { SECTORS, ORIGINS, COMPANIES, MOCK_USERS } from '@/types/qms';
-import type { OccurrenceType, Criticality, CompanyType } from '@/types/qms';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
+
+type OccurrenceType = Database['public']['Enums']['occurrence_type'];
+type CriticalityLevel = Database['public']['Enums']['criticality_level'];
+type CompanyType = Database['public']['Enums']['company_type'];
+
+const ORIGINS = [
+  'Auditoria Interna', 'Processos', 'Produto',
+  'Reclamação do Cliente', 'Indicadores', 'Acidente de Trabalho (CAT)'
+];
 
 export default function RNCForm() {
   const { setShowRNCForm } = useModule();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [type, setType] = useState<OccurrenceType | ''>('');
   const [subject, setSubject] = useState('');
-  const [criticality, setCriticality] = useState<Criticality | ''>('');
+  const [description, setDescription] = useState('');
+  const [criticality, setCriticality] = useState<CriticalityLevel | ''>('');
   const [date, setDate] = useState('');
-  const [company, setCompany] = useState('');
+  const [companyId, setCompanyId] = useState('');
   const [companyType, setCompanyType] = useState<CompanyType | ''>('');
-  const [sector, setSector] = useState('');
+  const [sectorId, setSectorId] = useState('');
   const [origin, setOrigin] = useState('');
-  const [approver, setApprover] = useState('');
+  const [approverId, setApproverId] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const approvers = MOCK_USERS.filter(u => u.role === 'approver' || u.role === 'admin');
+  const { data: companies = [] } = useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const { data } = await supabase.from('companies').select('*').eq('is_active', true);
+      return data || [];
+    },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { data: sectors = [] } = useQuery({
+    queryKey: ['sectors'],
+    queryFn: async () => {
+      const { data } = await supabase.from('sectors').select('*').eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  const { data: approvers = [] } = useQuery({
+    queryKey: ['approvers'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*, permission_profiles(can_approve_rnc)')
+        .eq('is_active', true);
+      return (data || []).filter(p =>
+        p.permission_profiles?.can_approve_rnc || false
+      );
+    },
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    const images = selected.filter(f => f.type.startsWith('image/'));
+    const others = selected.filter(f => !f.type.startsWith('image/'));
+    if (images.length > 3) { toast.error('Máximo de 3 imagens'); return; }
+    const tooLarge = selected.find(f => f.size > 5 * 1024 * 1024);
+    if (tooLarge) { toast.error('Arquivos devem ter no máximo 5MB'); return; }
+    setFiles(prev => [...prev, ...selected].slice(0, 6));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!type || !subject || !criticality || !date || !company || !companyType || !sector || !origin || !approver) {
+    if (!type || !subject || !criticality || !date || !companyId || !companyType || !sectorId || !origin || !approverId) {
       toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
-    toast.success('RNC registrada com sucesso! O aprovador será notificado.');
-    setShowRNCForm(false);
+    if (!user) return;
+    setLoading(true);
+
+    try {
+      const { data: rnc, error } = await supabase
+        .from('rnc_occurrences')
+        .insert({
+          code: 'TEMP',
+          occurrence_type: type,
+          subject,
+          description,
+          criticality,
+          occurrence_date: date,
+          company_id: companyId,
+          company_type: companyType,
+          sector_id: sectorId,
+          origin,
+          approver_id: approverId,
+          created_by: user.id,
+          status: 'aberta',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add creator and approver as participants
+      await supabase.from('rnc_participants').insert([
+        { rnc_id: rnc.id, user_id: user.id, role: 'creator' },
+        { rnc_id: rnc.id, user_id: approverId, role: 'approver' },
+      ]);
+
+      // Upload files
+      for (const file of files) {
+        const path = `${rnc.id}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('rnc-attachments')
+          .upload(path, file);
+        if (!uploadError) {
+          await supabase.from('rnc_attachments').insert({
+            rnc_id: rnc.id,
+            file_name: file.name,
+            file_path: path,
+            file_type: file.type,
+            file_size: file.size,
+            uploaded_by: user.id,
+          });
+        }
+      }
+
+      // Create notification for approver
+      await supabase.from('notifications').insert({
+        user_id: approverId,
+        title: 'Nova RNC para aprovação',
+        message: `RNC ${rnc.code}: ${subject}`,
+        type: 'rnc',
+        reference_type: 'rnc',
+        reference_id: rnc.id,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['rnc-list'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-count'] });
+      toast.success(`RNC ${rnc.code} registrada com sucesso!`);
+      setShowRNCForm(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao registrar RNC');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,45 +165,39 @@ export default function RNCForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Tipo de Ocorrência */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Tipo de Ocorrência *</Label>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               {([
-                { value: 'real', label: 'Real (Já ocorrida)' },
-                { value: 'potencial', label: 'Potencial (Pode ocorrer)' },
-                { value: 'oportunidade', label: 'Oportunidade de Melhoria' },
-              ] as const).map((opt) => (
+                { value: 'real' as const, label: 'Real (Já ocorrida)' },
+                { value: 'potencial' as const, label: 'Potencial (Pode ocorrer)' },
+                { value: 'oportunidade' as const, label: 'Oportunidade de Melhoria' },
+              ]).map((opt) => (
                 <label key={opt.value} className={`flex items-center gap-2 px-4 py-2.5 rounded-md border cursor-pointer transition-colors text-sm ${
-                  type === opt.value
-                    ? 'border-primary bg-primary/5 text-foreground'
-                    : 'border-border text-muted-foreground hover:border-primary/40'
+                  type === opt.value ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/40'
                 }`}>
-                  <input
-                    type="radio"
-                    name="type"
-                    value={opt.value}
-                    checked={type === opt.value}
-                    onChange={(e) => setType(e.target.value as OccurrenceType)}
-                    className="accent-primary"
-                  />
+                  <input type="radio" name="type" value={opt.value} checked={type === opt.value}
+                    onChange={(e) => setType(e.target.value as OccurrenceType)} className="accent-primary" />
                   {opt.label}
                 </label>
               ))}
             </div>
           </div>
 
-          {/* Assunto */}
           <div className="space-y-2">
             <Label htmlFor="subject">Assunto da Ocorrência *</Label>
-            <Textarea id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Descreva o assunto da ocorrência..." rows={3} />
+            <Input id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Assunto..." />
           </div>
 
-          {/* Criticidade + Data */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva a ocorrência..." rows={3} />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Criticidade *</Label>
-              <Select value={criticality} onValueChange={(v) => setCriticality(v as Criticality)}>
+              <Select value={criticality} onValueChange={(v) => setCriticality(v as CriticalityLevel)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="baixa">🟢 Baixa</SelectItem>
@@ -98,16 +212,13 @@ export default function RNCForm() {
             </div>
           </div>
 
-          {/* Empresa + Tipo */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Empresa *</Label>
-              <Select value={company} onValueChange={setCompany}>
+              <Select value={companyId} onValueChange={setCompanyId}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {COMPANIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -123,16 +234,13 @@ export default function RNCForm() {
             </div>
           </div>
 
-          {/* Setor + Origem */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Setor *</Label>
-              <Select value={sector} onValueChange={setSector}>
+              <Select value={sectorId} onValueChange={setSectorId}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {SECTORS.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
+                  {sectors.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -141,45 +249,50 @@ export default function RNCForm() {
               <Select value={origin} onValueChange={setOrigin}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {ORIGINS.map((o) => (
-                    <SelectItem key={o} value={o}>{o}</SelectItem>
-                  ))}
+                  {ORIGINS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Aprovador */}
           <div className="space-y-2">
             <Label>Aprovador da RNC *</Label>
-            <Select value={approver} onValueChange={setApprover}>
+            <Select value={approverId} onValueChange={setApproverId}>
               <SelectTrigger><SelectValue placeholder="Selecione o aprovador" /></SelectTrigger>
               <SelectContent>
                 {approvers.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.name} — {u.sector}</SelectItem>
+                  <SelectItem key={u.user_id} value={u.user_id}>{u.full_name} — {u.email}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Anexos */}
           <div className="space-y-2">
             <Label>Anexos</Label>
-            <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground hover:border-primary/40 transition-colors cursor-pointer">
+            <label className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground hover:border-primary/40 transition-colors cursor-pointer block">
               <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Arraste arquivos ou clique para enviar</p>
               <p className="text-xs mt-1">Máx. 3 imagens + PDF, Excel, Word (até 5MB cada)</p>
-            </div>
+              <input type="file" multiple className="hidden" onChange={handleFileChange}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" />
+            </label>
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {files.map((f, i) => (
+                  <span key={i} className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1">
+                    {f.name}
+                    <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => setShowRNCForm(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              Enviar RNC
-            </Button>
+            <Button type="button" variant="outline" onClick={() => setShowRNCForm(false)}>Cancelar</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Enviando...' : 'Enviar RNC'}</Button>
           </div>
         </form>
       </div>
