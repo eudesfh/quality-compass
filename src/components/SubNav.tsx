@@ -1,7 +1,6 @@
 import { Home, Search, BarChart3, Plus } from 'lucide-react';
-import { useModule } from '@/contexts/ModuleContext';
+import { useModule, SubView } from '@/contexts/ModuleContext';
 import { Button } from '@/components/ui/button';
-import type { SubView } from '@/types/qms';
 
 const views: { key: SubView; label: string; icon: typeof Home }[] = [
   { key: 'inicio', label: 'Início', icon: Home },
@@ -10,7 +9,9 @@ const views: { key: SubView; label: string; icon: typeof Home }[] = [
 ];
 
 export default function SubNav() {
-  const { activeModule, activeView, setActiveView, setShowRNCForm, setShowRiskForm } = useModule();
+  const { activeModule, activeView, setActiveView, setShowRNCForm, setShowRiskForm, showAdminPanel } = useModule();
+
+  if (showAdminPanel) return null;
 
   const handleNew = () => {
     if (activeModule === 'rnc') setShowRNCForm(true);
