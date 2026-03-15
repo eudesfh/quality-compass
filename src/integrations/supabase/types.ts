@@ -722,11 +722,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_rnc_access: {
+        Args: { _rnc_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_rnc_participant: {
+        Args: { _rnc_id: string; _user_id: string }
         Returns: boolean
       }
     }
