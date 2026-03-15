@@ -8,36 +8,20 @@ import { Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success('Login realizado com sucesso!');
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: window.location.origin,
-          },
-        });
-        if (error) throw error;
-        toast.success('Conta criada! Verifique seu e-mail para confirmar.');
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success('Login realizado com sucesso!');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao processar solicitação');
+      toast.error(error.message || 'Erro ao fazer login');
     } finally {
       setLoading(false);
     }
@@ -95,16 +79,10 @@ export default function AuthPage() {
         <CardHeader className="text-center">
           <Shield className="h-10 w-10 mx-auto text-primary mb-2" />
           <CardTitle className="text-xl">SGQ — Sistema de Gestão da Qualidade</CardTitle>
-          <CardDescription>{isLogin ? 'Faça login para continuar' : 'Criar nova conta'}</CardDescription>
+          <CardDescription>Faça login para continuar</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Nome Completo</Label>
-                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-              </div>
-            )}
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -113,20 +91,15 @@ export default function AuthPage() {
               <Label htmlFor="password">Senha</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
-            {isLogin && (
-              <button type="button" className="text-sm text-primary hover:underline" onClick={() => setShowForgot(true)}>
-                Esqueceu a senha?
-              </button>
-            )}
+            <button type="button" className="text-sm text-primary hover:underline" onClick={() => setShowForgot(true)}>
+              Esqueceu a senha?
+            </button>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Processando...' : isLogin ? 'Entrar' : 'Criar Conta'}
+              {loading ? 'Processando...' : 'Entrar'}
             </Button>
-            <div className="text-center text-sm text-muted-foreground">
-              {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
-              <button type="button" className="text-primary hover:underline" onClick={() => setIsLogin(!isLogin)}>
-                {isLogin ? 'Criar conta' : 'Fazer login'}
-              </button>
-            </div>
+            <p className="text-center text-sm text-muted-foreground">
+              Não tem acesso? Solicite já seu usuário ao administrador.
+            </p>
           </form>
         </CardContent>
       </Card>
