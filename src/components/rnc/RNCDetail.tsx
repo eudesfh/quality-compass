@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,15 @@ const typeLabels: Record<OccurrenceType, string> = {
   real: 'Real (NC)', potencial: 'Potencial', oportunidade: 'Oportunidade de Melhoria',
 };
 
+/*
+  STAGES:
+  1 - Análise de Causa (5 Porquês + causa raiz)
+  2 - Plano de Ação (5W2H)
+  3 - Validação do setor especializado
+  4 - Implementação (+ selecionar setor e prazo para validação)
+  5 - Análise de Eficácia do setor especializado
+*/
+
 export default function RNCDetail() {
   const { selectedRNCId, setSelectedRNCId } = useModule();
   const { user, isAdmin } = useAuth();
@@ -35,11 +44,9 @@ export default function RNCDetail() {
   const { data: rnc } = useQuery({
     queryKey: ['rnc-detail', selectedRNCId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('rnc_occurrences')
+      const { data } = await supabase.from('rnc_occurrences')
         .select('*, companies(name), sectors(name)')
-        .eq('id', selectedRNCId!)
-        .single();
+        .eq('id', selectedRNCId!).single();
       return data;
     },
     enabled: !!selectedRNCId,
@@ -93,7 +100,6 @@ export default function RNCDetail() {
 
   const getProfileName = (userId: string) => profiles.find(p => p.user_id === userId)?.full_name || 'N/A';
   const isApprover = rnc?.approver_id === user?.id;
-  const isCreator = rnc?.created_by === user?.id;
 
   if (!rnc) return <div className="p-6">Carregando...</div>;
 
@@ -128,7 +134,7 @@ export default function RNCDetail() {
         </div>
       </div>
 
-      {/* Triage - if status is aberta and user is approver */}
+      {/* Triage */}
       {rnc.status === 'aberta' && (isApprover || isAdmin) && (
         <TriageSection rncId={rnc.id} rnc={rnc} profiles={profiles} sectors={sectors} queryClient={queryClient} user={user} />
       )}
@@ -154,6 +160,7 @@ export default function RNCDetail() {
   );
 }
 
+/* ======================== TRIAGE ======================== */
 function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any) {
   const [reclassifiedType, setReclassifiedType] = useState<OccurrenceType>(rnc.occurrence_type);
   const [reject, setReject] = useState(false);
@@ -161,13 +168,11 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   const [notify, setNotify] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Stage assignments
-  const [stage1User, setStage1User] = useState('');
   const [stage1Sector, setStage1Sector] = useState('');
+  const [stage1User, setStage1User] = useState('');
   const [stage1Deadline, setStage1Deadline] = useState('');
-  const [stage2Sector, setStage2Sector] = useState('');
   const [stage3Sector, setStage3Sector] = useState('');
-  const [stage4Sector, setStage4Sector] = useState('');
+  const [stage5Sector, setStage5Sector] = useState('');
 
   const sectorUsers = profiles.filter((p: any) => p.sector_id === stage1Sector);
 
@@ -176,35 +181,26 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
     try {
       if (reject) {
         await supabase.from('rnc_occurrences').update({
-          status: 'recusada',
-          rejection_reason: rejectionReason,
+          status: 'recusada', rejection_reason: rejectionReason,
         }).eq('id', rncId);
         toast.success('RNC recusada');
       } else {
-        // Update RNC
         await supabase.from('rnc_occurrences').update({
-          status: 'analise_causa',
-          reclassified_type: reclassifiedType,
-          notify_participants: notify,
+          status: 'analise_causa', reclassified_type: reclassifiedType, notify_participants: notify,
         }).eq('id', rncId);
 
-        // Create stages
         const stageData = [
           { rnc_id: rncId, stage_number: 1, stage_name: 'Análise de Causa', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, deadline: stage1Deadline || null, status: 'em_andamento' as const },
-          { rnc_id: rncId, stage_number: 2, stage_name: 'Validação', responsible_sector_id: stage2Sector || null, deadline: stage1Deadline ? new Date(new Date(stage1Deadline).getTime() + 5 * 86400000).toISOString().split('T')[0] : null, status: 'pendente' as const },
-          { rnc_id: rncId, stage_number: 3, stage_name: 'Implementação', responsible_sector_id: stage3Sector || null, status: 'pendente' as const },
-          { rnc_id: rncId, stage_number: 4, stage_name: 'Validação Final', responsible_sector_id: stage3Sector || null, status: 'pendente' as const },
-          { rnc_id: rncId, stage_number: 5, stage_name: 'Avaliação de Eficácia', responsible_sector_id: stage4Sector || null, status: 'pendente' as const },
+          { rnc_id: rncId, stage_number: 2, stage_name: 'Plano de Ação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
+          { rnc_id: rncId, stage_number: 3, stage_name: 'Validação do Setor Especializado', responsible_sector_id: stage3Sector || null, status: 'pendente' as const },
+          { rnc_id: rncId, stage_number: 4, stage_name: 'Implementação', responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
+          { rnc_id: rncId, stage_number: 5, stage_name: 'Análise de Eficácia', responsible_sector_id: stage5Sector || null, status: 'pendente' as const },
         ];
         await supabase.from('rnc_stages').insert(stageData);
 
-        // Add participants
         if (stage1User) {
-          await supabase.from('rnc_participants').insert({
-            rnc_id: rncId, user_id: stage1User, role: 'analyst'
-          });
+          await supabase.from('rnc_participants').insert({ rnc_id: rncId, user_id: stage1User, role: 'analyst' });
         }
-
         toast.success('RNC aprovada e etapas criadas');
       }
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
@@ -220,7 +216,6 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   return (
     <div className="bg-card border rounded-lg p-6 mb-4">
       <h3 className="font-semibold text-foreground mb-4">Triagem da Ocorrência</h3>
-      
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>Classificação do Tipo de Ocorrência</Label>
@@ -247,26 +242,22 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
         ) : (
           <div className="space-y-4 border-t pt-4">
             <h4 className="font-medium text-sm text-foreground">Definir Responsáveis das Etapas</h4>
-            
+
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium">Etapa 1 — Análise de Causa e Plano de Ação</p>
+              <p className="text-sm font-medium">Etapas 1 e 2 — Análise de Causa e Plano de Ação</p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Setor</Label>
                   <Select value={stage1Sector} onValueChange={setStage1Sector}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                    <SelectContent>
-                      {sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Responsável</Label>
                   <Select value={stage1User} onValueChange={setStage1User}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Pessoa" /></SelectTrigger>
-                    <SelectContent>
-                      {sectorUsers.map((u: any) => <SelectItem key={u.user_id} value={u.user_id}>{u.full_name}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{sectorUsers.map((u: any) => <SelectItem key={u.user_id} value={u.user_id}>{u.full_name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
@@ -277,40 +268,23 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
             </div>
 
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium">Etapa 2 — Validação (Prazo: 5 dias após Etapa 1)</p>
+              <p className="text-sm font-medium">Etapa 3 — Validação do Setor Especializado</p>
               <div className="space-y-1">
                 <Label className="text-xs">Setor Especialista</Label>
-                <Select value={stage2Sector} onValueChange={setStage2Sector}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                  <SelectContent>
-                    {sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium">Etapa 3 — Implementação</p>
-              <div className="space-y-1">
-                <Label className="text-xs">Setor Responsável</Label>
                 <Select value={stage3Sector} onValueChange={setStage3Sector}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                  <SelectContent>
-                    {sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium">Etapa 4/5 — Avaliação de Eficácia</p>
+              <p className="text-sm font-medium">Etapa 5 — Análise de Eficácia</p>
               <div className="space-y-1">
                 <Label className="text-xs">Setor Especialista</Label>
-                <Select value={stage4Sector} onValueChange={setStage4Sector}>
+                <Select value={stage5Sector} onValueChange={setStage5Sector}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                  <SelectContent>
-                    {sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -332,6 +306,7 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   );
 }
 
+/* ======================== STAGE CARD ======================== */
 function StageCard({ stage, rnc, causeAnalysis, actions, efficacy, profiles, sectors, user, isAdmin, queryClient }: any) {
   const stageIcons: Record<string, any> = {
     em_andamento: <Clock className="h-4 w-4 text-primary" />,
@@ -343,7 +318,6 @@ function StageCard({ stage, rnc, causeAnalysis, actions, efficacy, profiles, sec
 
   const isActive = stage.status === 'em_andamento';
   const getSectorName = (id: string) => sectors.find((s: any) => s.id === id)?.name || '';
-  const getProfileName = (userId: string) => profiles.find((p: any) => p.user_id === userId)?.full_name || '';
 
   return (
     <div className={`bg-card border rounded-lg p-4 ${isActive ? 'border-primary/30 ring-1 ring-primary/10' : ''}`}>
@@ -367,26 +341,38 @@ function StageCard({ stage, rnc, causeAnalysis, actions, efficacy, profiles, sec
         </div>
       )}
 
-      {/* Stage 1: Cause Analysis */}
+      {/* Stage 1: Análise de Causa */}
       {stage.stage_number === 1 && isActive && (
         <CauseAnalysisForm rncId={rnc.id} stageId={stage.id} existing={causeAnalysis}
-          user={user} queryClient={queryClient} profiles={profiles} />
+          user={user} queryClient={queryClient} />
       )}
       {stage.stage_number === 1 && !isActive && causeAnalysis && (
         <CauseAnalysisReadonly causeAnalysis={causeAnalysis} />
       )}
 
-      {/* Stage 2: Action Plan (shown in stage 1 after cause is approved, or in stage 2) */}
-      {(stage.stage_number === 2 || (stage.stage_number === 1 && (stage.status === 'aprovado' || stage.status === 'concluido'))) && actions.length > 0 && (
+      {/* Stage 2: Plano de Ação */}
+      {stage.stage_number === 2 && isActive && (
+        <ActionPlanForm rncId={rnc.id} stageId={stage.id} existing={actions}
+          user={user} queryClient={queryClient} profiles={profiles} />
+      )}
+      {stage.stage_number === 2 && !isActive && actions.length > 0 && (
         <ActionPlanReadonly actions={actions} profiles={profiles} />
       )}
 
-      {/* Stage 3: Implementation */}
+      {/* Stage 3: Validação do Setor Especializado */}
       {stage.stage_number === 3 && isActive && (
-        <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} />
+        <ValidationForm stageId={stage.id} rncId={rnc.id} queryClient={queryClient} stageName="Validação" />
       )}
 
-      {/* Stage 5: Efficacy */}
+      {/* Stage 4: Implementação */}
+      {stage.stage_number === 4 && isActive && (
+        <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} />
+      )}
+      {stage.stage_number === 4 && !isActive && actions.length > 0 && (
+        <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation />
+      )}
+
+      {/* Stage 5: Análise de Eficácia */}
       {stage.stage_number === 5 && isActive && (
         <EfficacyForm rncId={rnc.id} stageId={stage.id} existing={efficacy}
           user={user} queryClient={queryClient} />
@@ -401,13 +387,11 @@ function StageCard({ stage, rnc, causeAnalysis, actions, efficacy, profiles, sec
   );
 }
 
-function CauseAnalysisForm({ rncId, stageId, existing, user, queryClient, profiles }: any) {
+/* ======================== CAUSE ANALYSIS ======================== */
+function CauseAnalysisForm({ rncId, stageId, existing, user, queryClient }: any) {
   const [whys, setWhys] = useState({
-    why_1: existing?.why_1 || '',
-    why_2: existing?.why_2 || '',
-    why_3: existing?.why_3 || '',
-    why_4: existing?.why_4 || '',
-    why_5: existing?.why_5 || '',
+    why_1: existing?.why_1 || '', why_2: existing?.why_2 || '', why_3: existing?.why_3 || '',
+    why_4: existing?.why_4 || '', why_5: existing?.why_5 || '',
   });
   const [rootCause, setRootCause] = useState<number>(existing?.root_cause_why || 1);
   const [loading, setLoading] = useState(false);
@@ -428,11 +412,21 @@ function CauseAnalysisForm({ rncId, stageId, existing, user, queryClient, profil
       }
       queryClient.invalidateQueries({ queryKey: ['rnc-cause'] });
       toast.success('Análise de causa salva');
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+  };
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
+      // Activate stage 2
+      const { data: nextStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
+      if (nextStage) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
+      await supabase.from('rnc_occurrences').update({ status: 'plano_acao' }).eq('id', rncId);
+      queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
+      queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
+      toast.success('Análise de causa concluída. Próxima etapa: Plano de Ação.');
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
   return (
@@ -449,8 +443,9 @@ function CauseAnalysisForm({ rncId, stageId, existing, user, queryClient, profil
           </div>
         </div>
       ))}
-      <div className="flex justify-end">
-        <Button size="sm" onClick={handleSave} disabled={loading}>{loading ? 'Salvando...' : 'Salvar Análise de Causa'}</Button>
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={handleSave} disabled={loading}>Salvar Rascunho</Button>
+        <Button size="sm" onClick={handleComplete} disabled={loading}>Concluir Análise e Avançar</Button>
       </div>
     </div>
   );
@@ -475,7 +470,113 @@ function CauseAnalysisReadonly({ causeAnalysis }: any) {
   );
 }
 
-function ActionPlanReadonly({ actions, profiles }: any) {
+/* ======================== ACTION PLAN ======================== */
+function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles }: any) {
+  const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
+  const [loading, setLoading] = useState(false);
+
+  const emptyAction = { what_to_do: '', why_to_do: '', how_to_do: '', responsible_user_id: '', deadline: '', cost: '' };
+
+  const addAction = () => setActions([...actions, { ...emptyAction, _new: true }]);
+
+  const updateAction = (index: number, field: string, value: string) => {
+    const updated = [...actions];
+    updated[index] = { ...updated[index], [field]: value };
+    setActions(updated);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      for (const action of actions) {
+        if (action._new) {
+          if (!action.what_to_do || !action.why_to_do || !action.how_to_do || !action.responsible_user_id || !action.deadline) {
+            toast.error('Preencha todos os campos obrigatórios de cada ação');
+            setLoading(false);
+            return;
+          }
+          await supabase.from('rnc_actions').insert({
+            rnc_id: rncId, what_to_do: action.what_to_do, why_to_do: action.why_to_do,
+            how_to_do: action.how_to_do, responsible_user_id: action.responsible_user_id,
+            deadline: action.deadline, cost: action.cost ? parseFloat(action.cost) : null,
+          });
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
+      toast.success('Plano de ação salvo');
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+  };
+
+  const handleComplete = async () => {
+    if (actions.length === 0) { toast.error('Adicione pelo menos uma ação'); return; }
+    await handleSave();
+    setLoading(true);
+    try {
+      await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
+      const { data: nextStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 3).single();
+      if (nextStage) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
+      await supabase.from('rnc_occurrences').update({ status: 'validacao' }).eq('id', rncId);
+      queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
+      queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
+      toast.success('Plano de ação concluído. Próxima etapa: Validação.');
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="mt-3 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium">Plano de Ação (5W2H)</h4>
+        <Button size="sm" variant="outline" onClick={addAction}>+ Adicionar Ação</Button>
+      </div>
+
+      {actions.map((action: any, i: number) => (
+        <div key={action.id || i} className="bg-muted/50 rounded-lg p-4 space-y-3 border">
+          <p className="text-sm font-medium text-foreground">Ação {i + 1}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">O que fazer? (What) *</Label>
+              <Input value={action.what_to_do} onChange={(e) => updateAction(i, 'what_to_do', e.target.value)} className="h-9" disabled={!action._new} />
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Por que fazer? (Why) *</Label>
+              <Input value={action.why_to_do} onChange={(e) => updateAction(i, 'why_to_do', e.target.value)} className="h-9" disabled={!action._new} />
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label className="text-xs">Como fazer? (How) *</Label>
+              <Textarea value={action.how_to_do} onChange={(e) => updateAction(i, 'how_to_do', e.target.value)} rows={2} disabled={!action._new} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Responsável (Who) *</Label>
+              <Select value={action.responsible_user_id} onValueChange={(v) => updateAction(i, 'responsible_user_id', v)} disabled={!action._new}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{profiles.map((p: any) => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Prazo (When) *</Label>
+              <Input type="date" value={action.deadline?.split?.('T')?.[0] || action.deadline || ''} onChange={(e) => updateAction(i, 'deadline', e.target.value)} className="h-9" disabled={!action._new} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Custo (How much)</Label>
+              <Input type="number" value={action.cost || ''} onChange={(e) => updateAction(i, 'cost', e.target.value)} placeholder="R$" className="h-9" disabled={!action._new} />
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {actions.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada. Clique em "+ Adicionar Ação".</p>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={handleSave} disabled={loading}>Salvar Rascunho</Button>
+        <Button size="sm" onClick={handleComplete} disabled={loading}>Concluir Plano e Avançar</Button>
+      </div>
+    </div>
+  );
+}
+
+function ActionPlanReadonly({ actions, profiles, showImplementation }: any) {
   const getProfileName = (userId: string) => profiles.find((p: any) => p.user_id === userId)?.full_name || '';
   return (
     <div className="mt-3">
@@ -489,6 +590,9 @@ function ActionPlanReadonly({ actions, profiles }: any) {
               <span>Prazo: {new Date(a.deadline).toLocaleDateString('pt-BR')}</span>
               <span>{a.is_implemented ? '✅ Implementada' : '⏳ Pendente'}</span>
             </div>
+            {showImplementation && a.evidence && (
+              <p className="text-xs text-muted-foreground mt-1">Evidência: {a.evidence}</p>
+            )}
           </div>
         ))}
       </div>
@@ -496,11 +600,65 @@ function ActionPlanReadonly({ actions, profiles }: any) {
   );
 }
 
-function ImplementationForm({ actions, user, queryClient, rncId, stageId }: any) {
-  const [evidence, setEvidence] = useState<Record<string, string>>({});
+/* ======================== VALIDATION ======================== */
+function ValidationForm({ stageId, rncId, queryClient, stageName }: any) {
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [reject, setReject] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const myActions = actions.filter((a: any) => a.responsible_user_id === user?.id && !a.is_implemented);
+  const handleValidate = async () => {
+    setLoading(true);
+    try {
+      if (reject) {
+        await supabase.from('rnc_stages').update({ status: 'reprovado', rejection_reason: rejectionReason }).eq('id', stageId);
+        // Go back to stage 2 (Plano de Ação)
+        const { data: stage2 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
+        if (stage2) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage2.id);
+        await supabase.from('rnc_occurrences').update({ status: 'plano_acao' }).eq('id', rncId);
+        toast.info('Validação reprovada. Retornando ao Plano de Ação.');
+      } else {
+        await supabase.from('rnc_stages').update({ status: 'aprovado', completed_at: new Date().toISOString() }).eq('id', stageId);
+        // Activate stage 4
+        const { data: nextStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 4).single();
+        if (nextStage) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
+        await supabase.from('rnc_occurrences').update({ status: 'implementacao' }).eq('id', rncId);
+        toast.success('Validação aprovada. Próxima etapa: Implementação.');
+      }
+      queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
+      queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="mt-3 space-y-3">
+      <p className="text-sm text-muted-foreground">O setor especializado deve validar o plano de ação proposto.</p>
+      <div className="flex items-center gap-2">
+        <Checkbox checked={reject} onCheckedChange={(c) => setReject(!!c)} />
+        <Label className="text-sm">Reprovar e devolver ao Plano de Ação</Label>
+      </div>
+      {reject && (
+        <div className="space-y-1">
+          <Label className="text-xs">Motivo da reprovação *</Label>
+          <Textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Justifique..." rows={2} />
+        </div>
+      )}
+      <div className="flex justify-end">
+        <Button size="sm" variant={reject ? 'destructive' : 'default'} onClick={handleValidate}
+          disabled={loading || (reject && !rejectionReason)}>
+          {loading ? 'Processando...' : reject ? 'Reprovar' : 'Aprovar Validação'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ======================== IMPLEMENTATION ======================== */
+function ImplementationForm({ actions, user, queryClient, rncId, stageId, sectors }: any) {
+  const [evidence, setEvidence] = useState<Record<string, string>>({});
+  const [validationSector, setValidationSector] = useState('');
+  const [validationDeadline, setValidationDeadline] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const allImplemented = actions.every((a: any) => a.is_implemented);
 
   const handleImplement = async (actionId: string) => {
@@ -512,34 +670,34 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId }: any)
       }).eq('id', actionId);
       queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
       toast.success('Ação implementada');
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
   const handleFinishStage = async () => {
+    if (!validationSector) { toast.error('Selecione o setor para análise de eficácia'); return; }
+    if (!validationDeadline) { toast.error('Defina o prazo para análise de eficácia'); return; }
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
+      // Update stage 5 with sector and deadline
+      const { data: stage5 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 5).single();
+      if (stage5) {
+        await supabase.from('rnc_stages').update({
+          status: 'em_andamento', responsible_sector_id: validationSector, deadline: validationDeadline,
+        }).eq('id', stage5.id);
+      }
       await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
-      // Schedule efficacy evaluation 30 days from now
-      const scheduledDate = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
-      await supabase.from('rnc_efficacy').insert({ rnc_id: rncId, scheduled_date: scheduledDate });
+      await supabase.from('rnc_efficacy').insert({ rnc_id: rncId, scheduled_date: validationDeadline });
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
-      toast.success('Etapa finalizada. Eficácia agendada para 30 dias.');
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
+      toast.success('Implementação finalizada. Eficácia agendada.');
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
   return (
     <div className="mt-3 space-y-3">
-      {myActions.map((action: any) => (
+      <h4 className="text-sm font-medium">Implementação das Ações</h4>
+      {actions.filter((a: any) => !a.is_implemented).map((action: any) => (
         <div key={action.id} className="bg-muted/50 rounded p-3 space-y-2">
           <p className="text-sm font-medium">{action.what_to_do}</p>
           <div className="space-y-1">
@@ -550,15 +708,40 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId }: any)
           <Button size="sm" onClick={() => handleImplement(action.id)} disabled={loading}>Marcar como Implementada</Button>
         </div>
       ))}
+
+      {actions.filter((a: any) => a.is_implemented).length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          ✅ {actions.filter((a: any) => a.is_implemented).length} de {actions.length} ações implementadas
+        </div>
+      )}
+
       {allImplemented && (
-        <div className="pt-2">
-          <Button onClick={handleFinishStage} disabled={loading}>Finalizar Etapa de Implementação</Button>
+        <div className="border-t pt-4 space-y-3">
+          <h4 className="text-sm font-medium">Finalizar Implementação</h4>
+          <p className="text-xs text-muted-foreground">Selecione o setor especializado e o prazo para a análise de eficácia.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Setor para Análise de Eficácia *</Label>
+              <Select value={validationSector} onValueChange={setValidationSector}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
+                <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Prazo para Eficácia *</Label>
+              <Input type="date" value={validationDeadline} onChange={(e) => setValidationDeadline(e.target.value)} className="h-9" />
+            </div>
+          </div>
+          <Button onClick={handleFinishStage} disabled={loading}>
+            {loading ? 'Processando...' : 'Finalizar Implementação e Agendar Eficácia'}
+          </Button>
         </div>
       )}
     </div>
   );
 }
 
+/* ======================== EFFICACY ======================== */
 function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
   const [isEffective, setIsEffective] = useState<boolean | null>(existing?.is_effective ?? null);
   const [evidence, setEvidence] = useState(existing?.evidence || '');
@@ -580,22 +763,24 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
         toast.success('RNC concluída com eficácia!');
       } else {
-        // Restart from action plan
+        // Return to stage 2 (Plano de Ação)
+        await supabase.from('rnc_stages').update({ status: 'reprovado' }).eq('id', stageId);
+        const { data: stage2 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
+        if (stage2) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage2.id);
         await supabase.from('rnc_occurrences').update({ status: 'plano_acao' }).eq('id', rncId);
-        toast.info('Eficácia não comprovada. Fluxo retorna ao Plano de Ação.');
+        toast.info('Eficácia não comprovada. Retornando ao Plano de Ação.');
       }
       queryClient.invalidateQueries({ queryKey: ['rnc-efficacy'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
   return (
     <div className="mt-3 space-y-3">
+      <p className="text-sm text-muted-foreground">
+        {existing?.scheduled_date && `Data agendada: ${new Date(existing.scheduled_date).toLocaleDateString('pt-BR')}`}
+      </p>
       <div className="flex gap-3">
         <label className={`flex items-center gap-2 px-4 py-2 rounded-md border cursor-pointer text-sm ${isEffective === true ? 'border-risk-low bg-risk-low-light' : 'border-border'}`}>
           <input type="radio" name="efficacy" checked={isEffective === true} onChange={() => setIsEffective(true)} className="accent-primary" />

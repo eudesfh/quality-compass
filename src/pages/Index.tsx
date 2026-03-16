@@ -51,7 +51,7 @@ function ModuleContent() {
     <div className={`min-h-screen bg-background ${activeModule === 'rnc' ? 'module-rnc' : 'module-risk'}`}>
       <TopNav />
       <SubNav />
-      <main className="max-w-7xl mx-auto">
+      <main className={activeView === 'consultas' && !showAdminPanel && !selectedRNCId ? '' : 'max-w-7xl mx-auto'}>
         {renderContent()}
       </main>
       {showRNCForm && <RNCForm />}
