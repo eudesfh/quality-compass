@@ -87,6 +87,7 @@ export default function RiskForm() {
         response, frequency: frequency || null,
         treatment: treatment || null, deadline: deadline || null,
         status, sector_id: sectorId || null, company_id: companyId || null,
+        company_type: companyType || null,
         created_by: user.id,
       });
       if (error) throw error;
