@@ -3,8 +3,11 @@ import { useModule, Module } from '@/contexts/ModuleContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useState } from 'react';
 
 const modules: { key: Module; label: string }[] = [
   { key: 'rnc', label: 'RNC' },
@@ -12,31 +15,56 @@ const modules: { key: Module; label: string }[] = [
 ];
 
 export default function TopNav() {
-  const { activeModule, setActiveModule, setActiveView, setShowAdminPanel } = useModule();
+  const { activeModule, setActiveModule, setActiveView, setShowAdminPanel, setSelectedRNCId } = useModule();
   const { profile, isAdmin, signOut } = useAuth();
+  const queryClient = useQueryClient();
+  const [notifOpen, setNotifOpen] = useState(false);
 
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['notifications-count'],
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications'],
     queryFn: async () => {
-      const { count } = await supabase
+      const { data } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_read', false);
-      return count || 0;
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return data || [];
     },
     refetchInterval: 30000,
   });
 
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
   const handleModuleChange = (mod: Module) => {
     setActiveModule(mod);
     setActiveView('inicio');
+    setSelectedRNCId(null);
+    setShowAdminPanel(false);
+  };
+
+  const handleNavClick = (view: 'inicio') => {
+    setActiveView(view);
+    setSelectedRNCId(null);
+    setShowAdminPanel(false);
+  };
+
+  const markAsRead = async (id: string) => {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  };
+
+  const markAllRead = async () => {
+    const unread = notifications.filter(n => !n.is_read);
+    if (unread.length === 0) return;
+    await Promise.all(unread.map(n => supabase.from('notifications').update({ is_read: true }).eq('id', n.id)));
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
   };
 
   return (
     <header className="border-b bg-card">
       <div className="flex items-center justify-between px-6 h-14">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setActiveView('inicio'); setShowAdminPanel(false); }}>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavClick('inicio')}>
             <Shield className="h-6 w-6 text-primary" />
             <span className="font-semibold text-lg text-foreground">SGQ</span>
           </div>
@@ -44,7 +72,7 @@ export default function TopNav() {
             {modules.map((mod) => (
               <button
                 key={mod.key}
-                onClick={() => { handleModuleChange(mod.key); setShowAdminPanel(false); }}
+                onClick={() => handleModuleChange(mod.key)}
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                   activeModule === mod.key
                     ? mod.key === 'rnc'
@@ -59,14 +87,45 @@ export default function TopNav() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-medium">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </Button>
+          <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-medium">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <h3 className="text-sm font-semibold">Notificações</h3>
+                {unreadCount > 0 && (
+                  <button onClick={markAllRead} className="text-xs text-primary hover:underline">Marcar todas como lidas</button>
+                )}
+              </div>
+              <ScrollArea className="max-h-80">
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">Nenhuma notificação</p>
+                ) : (
+                  <div className="divide-y">
+                    {notifications.map(n => (
+                      <button
+                        key={n.id}
+                        onClick={() => markAsRead(n.id)}
+                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${!n.is_read ? 'bg-primary/5' : ''}`}
+                      >
+                        <p className={`text-sm ${!n.is_read ? 'font-medium' : ''}`}>{n.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -80,7 +139,7 @@ export default function TopNav() {
               </div>
               <DropdownMenuSeparator />
               {isAdmin && (
-                <DropdownMenuItem onClick={() => setShowAdminPanel(true)}>
+                <DropdownMenuItem onClick={() => { setShowAdminPanel(true); setSelectedRNCId(null); }}>
                   <Settings className="h-4 w-4 mr-2" />
                   Administração
                 </DropdownMenuItem>

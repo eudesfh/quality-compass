@@ -9,9 +9,15 @@ const views: { key: SubView; label: string; icon: typeof Home }[] = [
 ];
 
 export default function SubNav() {
-  const { activeModule, activeView, setActiveView, setShowRNCForm, setShowRiskForm, showAdminPanel } = useModule();
+  const { activeModule, activeView, setActiveView, setShowRNCForm, setShowRiskForm, showAdminPanel, setSelectedRNCId, setShowAdminPanel } = useModule();
 
   if (showAdminPanel) return null;
+
+  const handleViewChange = (view: SubView) => {
+    setActiveView(view);
+    setSelectedRNCId(null);
+    setShowAdminPanel(false);
+  };
 
   const handleNew = () => {
     if (activeModule === 'rnc') setShowRNCForm(true);
@@ -27,7 +33,7 @@ export default function SubNav() {
             return (
               <button
                 key={v.key}
-                onClick={() => setActiveView(v.key)}
+                onClick={() => handleViewChange(v.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   activeView === v.key
                     ? 'bg-accent text-foreground'
