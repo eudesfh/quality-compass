@@ -50,6 +50,7 @@ export default function RiskConsultas() {
     if (search && !r.risk_description.toLowerCase().includes(search.toLowerCase()) && !r.code.toLowerCase().includes(search.toLowerCase())) return false;
     if (filters.status !== 'all' && r.status !== filters.status) return false;
     if (filters.company !== 'all' && r.company_id !== filters.company) return false;
+    if (filters.companyType !== 'all' && (r as any).company_type !== filters.companyType) return false;
     if (filters.sector !== 'all' && r.sector_id !== filters.sector) return false;
     if (filters.dateFrom && r.created_at.split('T')[0] < filters.dateFrom) return false;
     if (filters.dateTo && r.created_at.split('T')[0] > filters.dateTo) return false;

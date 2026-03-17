@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { CheckCircle, XCircle, Clock, Upload, Paperclip, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type RNCStatus = Database['public']['Enums']['rnc_status'];
 type OccurrenceType = Database['public']['Enums']['occurrence_type'];
+type CritLevel = Database['public']['Enums']['criticality_level'];
 
 const statusLabels: Record<RNCStatus, string> = {
   aberta: 'Aberta', triagem: 'Triagem', analise_causa: 'Análise de Causa',
@@ -27,14 +28,13 @@ const typeLabels: Record<OccurrenceType, string> = {
   real: 'Real (NC)', potencial: 'Potencial', oportunidade: 'Oportunidade de Melhoria',
 };
 
-/*
-  STAGES:
-  1 - Análise de Causa (5 Porquês + causa raiz)
-  2 - Plano de Ação (5W2H)
-  3 - Validação do setor especializado
-  4 - Implementação (+ selecionar setor e prazo para validação)
-  5 - Análise de Eficácia do setor especializado
-*/
+const STAGE_NAMES = [
+  'Análise de Causa',
+  'Plano de Ação',
+  'Validação',
+  'Implementação',
+  'Análise de Eficácia',
+];
 
 export default function RNCDetail() {
   const { selectedRNCId, setSelectedRNCId } = useModule();
@@ -101,14 +101,34 @@ export default function RNCDetail() {
   const getProfileName = (userId: string) => profiles.find(p => p.user_id === userId)?.full_name || 'N/A';
   const isApprover = rnc?.approver_id === user?.id;
 
+  // Determine active stage number for stepper
+  const getActiveStageNumber = () => {
+    const activeStage = stages.find(s => s.status === 'em_andamento');
+    if (activeStage) return activeStage.stage_number;
+    // If all completed, return 5
+    if (stages.length > 0 && stages.every(s => s.status === 'concluido' || s.status === 'aprovado')) return 6;
+    return 0;
+  };
+
+  const [viewingStage, setViewingStage] = useState<number | null>(null);
+
   if (!rnc) return <div className="p-6">Carregando...</div>;
 
-  return (
-    <div className="p-6 animate-fade-in max-w-4xl mx-auto">
-      <button onClick={() => setSelectedRNCId(null)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="h-4 w-4" /> Voltar
-      </button>
+  const activeStageNum = getActiveStageNumber();
+  const displayStage = viewingStage ?? activeStageNum;
 
+  const getStageStatus = (num: number) => {
+    const s = stages.find(st => st.stage_number === num);
+    return s?.status || 'pendente';
+  };
+
+  const canViewStage = (num: number) => {
+    const s = stages.find(st => st.stage_number === num);
+    return !!s;
+  };
+
+  return (
+    <div className="p-6 animate-fade-in max-w-5xl mx-auto">
       {/* Header */}
       <div className="bg-card border rounded-lg p-6 mb-4">
         <div className="flex items-start justify-between mb-4">
@@ -124,13 +144,14 @@ export default function RNCDetail() {
             {rnc.description && <p className="text-sm text-muted-foreground mt-1">{rnc.description}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div><span className="text-muted-foreground">Empresa:</span> <span className="font-medium">{(rnc.companies as any)?.name}</span></div>
           <div><span className="text-muted-foreground">Setor:</span> <span className="font-medium">{(rnc.sectors as any)?.name}</span></div>
           <div><span className="text-muted-foreground">Origem:</span> <span className="font-medium">{rnc.origin}</span></div>
           <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{new Date(rnc.occurrence_date).toLocaleDateString('pt-BR')}</span></div>
           <div><span className="text-muted-foreground">Criado por:</span> <span className="font-medium">{getProfileName(rnc.created_by)}</span></div>
           <div><span className="text-muted-foreground">Aprovador:</span> <span className="font-medium">{getProfileName(rnc.approver_id)}</span></div>
+          <div><span className="text-muted-foreground">Criticidade:</span> <span className="font-medium capitalize">{rnc.criticality}</span></div>
         </div>
       </div>
 
@@ -146,14 +167,145 @@ export default function RNCDetail() {
         </div>
       )}
 
-      {/* Workflow Steps */}
+      {/* Horizontal Stepper */}
       {stages.length > 0 && (
-        <div className="space-y-4">
-          {stages.map((stage) => (
-            <StageCard key={stage.id} stage={stage} rnc={rnc} causeAnalysis={causeAnalysis}
-              actions={actions} efficacy={efficacy} profiles={profiles} sectors={sectors}
-              user={user} isAdmin={isAdmin} queryClient={queryClient} />
-          ))}
+        <div className="bg-card border rounded-lg p-6 mb-4">
+          <div className="flex items-center justify-between mb-6">
+            {STAGE_NAMES.map((name, i) => {
+              const num = i + 1;
+              const status = getStageStatus(num);
+              const isActive = num === activeStageNum;
+              const isCompleted = status === 'concluido' || status === 'aprovado';
+              const isRejected = status === 'reprovado';
+              const isViewing = displayStage === num;
+              const clickable = canViewStage(num);
+
+              return (
+                <div key={num} className="flex items-center flex-1">
+                  <button
+                    onClick={() => clickable && setViewingStage(num)}
+                    disabled={!clickable}
+                    className={`flex flex-col items-center gap-1.5 flex-1 transition-all ${clickable ? 'cursor-pointer' : 'cursor-default opacity-50'}`}
+                  >
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all ${
+                      isViewing ? 'ring-2 ring-primary/30 ring-offset-2 ring-offset-card' : ''
+                    } ${
+                      isCompleted ? 'bg-primary border-primary text-primary-foreground' :
+                      isRejected ? 'bg-destructive border-destructive text-destructive-foreground' :
+                      isActive ? 'bg-primary/10 border-primary text-primary' :
+                      'bg-muted border-border text-muted-foreground'
+                    }`}>
+                      {isCompleted ? <CheckCircle className="h-4 w-4" /> :
+                       isRejected ? <XCircle className="h-4 w-4" /> :
+                       num}
+                    </div>
+                    <span className={`text-xs font-medium text-center leading-tight max-w-[90px] ${
+                      isActive ? 'text-primary' : isCompleted ? 'text-foreground' : 'text-muted-foreground'
+                    }`}>{name}</span>
+                  </button>
+                  {i < STAGE_NAMES.length - 1 && (
+                    <div className={`h-0.5 flex-1 mx-1 mt-[-20px] ${isCompleted ? 'bg-primary' : 'bg-border'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Stage Content */}
+          <div className="border-t pt-4">
+            <StageContent
+              stageNumber={displayStage}
+              stages={stages}
+              rnc={rnc}
+              causeAnalysis={causeAnalysis}
+              actions={actions}
+              efficacy={efficacy}
+              profiles={profiles}
+              sectors={sectors}
+              user={user}
+              isAdmin={isAdmin}
+              queryClient={queryClient}
+              activeStageNum={activeStageNum}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ======================== STAGE CONTENT ======================== */
+function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, efficacy, profiles, sectors, user, isAdmin, queryClient, activeStageNum }: any) {
+  const stage = stages.find((s: any) => s.stage_number === stageNumber);
+  if (!stage) return <p className="text-sm text-muted-foreground py-4">Etapa não disponível.</p>;
+
+  const isActive = stage.status === 'em_andamento';
+  const getSectorName = (id: string) => sectors.find((s: any) => s.id === id)?.name || '';
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">Etapa {stage.stage_number} — {stage.stage_name}</span>
+          <Badge variant={isActive ? 'default' : 'secondary'} className="text-xs">
+            {stage.status === 'em_andamento' ? 'Em andamento' : stage.status === 'pendente' ? 'Pendente' : stage.status === 'aprovado' ? 'Aprovado' : stage.status === 'concluido' ? 'Concluído' : 'Reprovado'}
+          </Badge>
+        </div>
+        <div className="text-xs text-muted-foreground flex gap-3">
+          {stage.responsible_sector_id && <span>Setor: {getSectorName(stage.responsible_sector_id)}</span>}
+          {stage.deadline && <span>Prazo: {new Date(stage.deadline).toLocaleDateString('pt-BR')}</span>}
+        </div>
+      </div>
+
+      {stage.rejection_reason && (
+        <div className="bg-destructive/5 border border-destructive/20 rounded p-3 mb-3">
+          <p className="text-sm text-destructive"><strong>Motivo da reprovação:</strong> {stage.rejection_reason}</p>
+        </div>
+      )}
+
+      {/* Stage 1: Análise de Causa */}
+      {stage.stage_number === 1 && isActive && (
+        <CauseAnalysisForm rncId={rnc.id} stageId={stage.id} existing={causeAnalysis}
+          user={user} queryClient={queryClient} />
+      )}
+      {stage.stage_number === 1 && !isActive && causeAnalysis && (
+        <CauseAnalysisReadonly causeAnalysis={causeAnalysis} />
+      )}
+
+      {/* Stage 2: Plano de Ação */}
+      {stage.stage_number === 2 && isActive && (
+        <ActionPlanForm rncId={rnc.id} stageId={stage.id} existing={actions}
+          user={user} queryClient={queryClient} profiles={profiles} causeAnalysis={causeAnalysis} />
+      )}
+      {stage.stage_number === 2 && !isActive && actions.length > 0 && (
+        <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />
+      )}
+
+      {/* Stage 3: Validação */}
+      {stage.stage_number === 3 && isActive && (
+        <ValidationForm stageId={stage.id} rncId={rnc.id} rnc={rnc} queryClient={queryClient} sectors={sectors} />
+      )}
+      {stage.stage_number === 3 && !isActive && (stage.status === 'aprovado' || stage.status === 'concluido') && (
+        <p className="text-sm text-muted-foreground py-2">✅ Validação aprovada pelo setor especializado.</p>
+      )}
+
+      {/* Stage 4: Implementação */}
+      {stage.stage_number === 4 && isActive && (
+        <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} />
+      )}
+      {stage.stage_number === 4 && !isActive && actions.length > 0 && (
+        <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation causeAnalysis={causeAnalysis} />
+      )}
+
+      {/* Stage 5: Análise de Eficácia */}
+      {stage.stage_number === 5 && isActive && (
+        <EfficacyForm rncId={rnc.id} stageId={stage.id} existing={efficacy}
+          user={user} queryClient={queryClient} />
+      )}
+      {stage.stage_number === 5 && !isActive && efficacy && (
+        <div className="text-sm mt-2">
+          <p><strong>Resultado:</strong> {efficacy.is_effective ? '✅ Eficaz' : '❌ Ineficaz'}</p>
+          {efficacy.evidence && <p className="text-muted-foreground mt-1">{efficacy.evidence}</p>}
         </div>
       )}
     </div>
@@ -192,7 +344,7 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
         const stageData = [
           { rnc_id: rncId, stage_number: 1, stage_name: 'Análise de Causa', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, deadline: stage1Deadline || null, status: 'em_andamento' as const },
           { rnc_id: rncId, stage_number: 2, stage_name: 'Plano de Ação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
-          { rnc_id: rncId, stage_number: 3, stage_name: 'Validação do Setor Especializado', responsible_sector_id: stage3Sector || null, status: 'pendente' as const },
+          { rnc_id: rncId, stage_number: 3, stage_name: 'Validação', responsible_sector_id: stage3Sector || null, status: 'pendente' as const },
           { rnc_id: rncId, stage_number: 4, stage_name: 'Implementação', responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
           { rnc_id: rncId, stage_number: 5, stage_name: 'Análise de Eficácia', responsible_sector_id: stage5Sector || null, status: 'pendente' as const },
         ];
@@ -306,87 +458,6 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   );
 }
 
-/* ======================== STAGE CARD ======================== */
-function StageCard({ stage, rnc, causeAnalysis, actions, efficacy, profiles, sectors, user, isAdmin, queryClient }: any) {
-  const stageIcons: Record<string, any> = {
-    em_andamento: <Clock className="h-4 w-4 text-primary" />,
-    pendente: <Clock className="h-4 w-4 text-muted-foreground" />,
-    aprovado: <CheckCircle className="h-4 w-4 text-risk-low" />,
-    concluido: <CheckCircle className="h-4 w-4 text-risk-low" />,
-    reprovado: <XCircle className="h-4 w-4 text-destructive" />,
-  };
-
-  const isActive = stage.status === 'em_andamento';
-  const getSectorName = (id: string) => sectors.find((s: any) => s.id === id)?.name || '';
-
-  return (
-    <div className={`bg-card border rounded-lg p-4 ${isActive ? 'border-primary/30 ring-1 ring-primary/10' : ''}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {stageIcons[stage.status]}
-          <span className="font-medium text-sm">Etapa {stage.stage_number} — {stage.stage_name}</span>
-          <Badge variant={isActive ? 'default' : 'secondary'} className="text-xs">
-            {stage.status === 'em_andamento' ? 'Em andamento' : stage.status === 'pendente' ? 'Pendente' : stage.status === 'aprovado' ? 'Aprovado' : stage.status === 'concluido' ? 'Concluído' : 'Reprovado'}
-          </Badge>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {stage.responsible_sector_id && <span>Setor: {getSectorName(stage.responsible_sector_id)}</span>}
-          {stage.deadline && <span className="ml-3">Prazo: {new Date(stage.deadline).toLocaleDateString('pt-BR')}</span>}
-        </div>
-      </div>
-
-      {stage.rejection_reason && (
-        <div className="bg-destructive/5 border border-destructive/20 rounded p-3 mb-3">
-          <p className="text-sm text-destructive"><strong>Motivo da reprovação:</strong> {stage.rejection_reason}</p>
-        </div>
-      )}
-
-      {/* Stage 1: Análise de Causa */}
-      {stage.stage_number === 1 && isActive && (
-        <CauseAnalysisForm rncId={rnc.id} stageId={stage.id} existing={causeAnalysis}
-          user={user} queryClient={queryClient} />
-      )}
-      {stage.stage_number === 1 && !isActive && causeAnalysis && (
-        <CauseAnalysisReadonly causeAnalysis={causeAnalysis} />
-      )}
-
-      {/* Stage 2: Plano de Ação */}
-      {stage.stage_number === 2 && isActive && (
-        <ActionPlanForm rncId={rnc.id} stageId={stage.id} existing={actions}
-          user={user} queryClient={queryClient} profiles={profiles} />
-      )}
-      {stage.stage_number === 2 && !isActive && actions.length > 0 && (
-        <ActionPlanReadonly actions={actions} profiles={profiles} />
-      )}
-
-      {/* Stage 3: Validação do Setor Especializado */}
-      {stage.stage_number === 3 && isActive && (
-        <ValidationForm stageId={stage.id} rncId={rnc.id} queryClient={queryClient} stageName="Validação" />
-      )}
-
-      {/* Stage 4: Implementação */}
-      {stage.stage_number === 4 && isActive && (
-        <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} />
-      )}
-      {stage.stage_number === 4 && !isActive && actions.length > 0 && (
-        <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation />
-      )}
-
-      {/* Stage 5: Análise de Eficácia */}
-      {stage.stage_number === 5 && isActive && (
-        <EfficacyForm rncId={rnc.id} stageId={stage.id} existing={efficacy}
-          user={user} queryClient={queryClient} />
-      )}
-      {stage.stage_number === 5 && !isActive && efficacy && (
-        <div className="text-sm mt-2">
-          <p><strong>Resultado:</strong> {efficacy.is_effective ? '✅ Eficaz' : '❌ Ineficaz'}</p>
-          {efficacy.evidence && <p className="text-muted-foreground mt-1">{efficacy.evidence}</p>}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ======================== CAUSE ANALYSIS ======================== */
 function CauseAnalysisForm({ rncId, stageId, existing, user, queryClient }: any) {
   const [whys, setWhys] = useState({
@@ -416,10 +487,11 @@ function CauseAnalysisForm({ rncId, stageId, existing, user, queryClient }: any)
   };
 
   const handleComplete = async () => {
+    if (!whys.why_1) { toast.error('Preencha ao menos o primeiro porquê'); return; }
+    await handleSave();
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-      // Activate stage 2
       const { data: nextStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
       if (nextStage) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
       await supabase.from('rnc_occurrences').update({ status: 'plano_acao' }).eq('id', rncId);
@@ -471,45 +543,60 @@ function CauseAnalysisReadonly({ causeAnalysis }: any) {
 }
 
 /* ======================== ACTION PLAN ======================== */
-function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles }: any) {
+function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles, causeAnalysis }: any) {
   const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
   const [loading, setLoading] = useState(false);
 
-  const emptyAction = { what_to_do: '', why_to_do: '', how_to_do: '', responsible_user_id: '', deadline: '', cost: '' };
+  // Extract whys from causeAnalysis for related cause selection
+  const availableWhys: { number: number; text: string }[] = [];
+  if (causeAnalysis) {
+    for (let i = 1; i <= 5; i++) {
+      const val = causeAnalysis[`why_${i}`];
+      if (val) availableWhys.push({ number: i, text: val });
+    }
+  }
+
+  const emptyAction = { what_to_do: '', why_to_do: '', how_to_do: '', responsible_user_id: '', deadline: '', cost: '', related_cause_why: null as number | null };
 
   const addAction = () => setActions([...actions, { ...emptyAction, _new: true }]);
 
-  const updateAction = (index: number, field: string, value: string) => {
+  const updateAction = (index: number, field: string, value: any) => {
     const updated = [...actions];
     updated[index] = { ...updated[index], [field]: value };
     setActions(updated);
   };
 
-  const handleSave = async () => {
+  const handleSaveAction = async (action: any, index: number) => {
+    if (!action.what_to_do || !action.why_to_do || !action.how_to_do || !action.responsible_user_id || !action.deadline) {
+      toast.error('Preencha todos os campos obrigatórios da ação');
+      return;
+    }
     setLoading(true);
     try {
-      for (const action of actions) {
-        if (action._new) {
-          if (!action.what_to_do || !action.why_to_do || !action.how_to_do || !action.responsible_user_id || !action.deadline) {
-            toast.error('Preencha todos os campos obrigatórios de cada ação');
-            setLoading(false);
-            return;
-          }
-          await supabase.from('rnc_actions').insert({
-            rnc_id: rncId, what_to_do: action.what_to_do, why_to_do: action.why_to_do,
-            how_to_do: action.how_to_do, responsible_user_id: action.responsible_user_id,
-            deadline: action.deadline, cost: action.cost ? parseFloat(action.cost) : null,
-          });
-        }
+      if (action._new) {
+        const { data, error } = await supabase.from('rnc_actions').insert({
+          rnc_id: rncId, what_to_do: action.what_to_do, why_to_do: action.why_to_do,
+          how_to_do: action.how_to_do, responsible_user_id: action.responsible_user_id,
+          deadline: action.deadline, cost: action.cost ? parseFloat(action.cost) : null,
+          related_cause_why: action.related_cause_why,
+        }).select().single();
+        if (error) throw error;
+        // Replace with saved version
+        const updated = [...actions];
+        updated[index] = data;
+        setActions(updated);
       }
       queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
-      toast.success('Plano de ação salvo');
+      toast.success('Ação salva com sucesso');
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
   const handleComplete = async () => {
     if (actions.length === 0) { toast.error('Adicione pelo menos uma ação'); return; }
-    await handleSave();
+    // Check if there are unsaved new actions
+    const unsaved = actions.filter(a => a._new);
+    if (unsaved.length > 0) { toast.error('Salve todas as ações antes de avançar'); return; }
+
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
@@ -531,7 +618,31 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles 
 
       {actions.map((action: any, i: number) => (
         <div key={action.id || i} className="bg-muted/50 rounded-lg p-4 space-y-3 border">
-          <p className="text-sm font-medium text-foreground">Ação {i + 1}</p>
+          <p className="text-sm font-medium text-foreground">Ação {i + 1} {!action._new && <Badge variant="secondary" className="text-xs ml-2">Salva</Badge>}</p>
+
+          {/* Related causes from stage 1 */}
+          {availableWhys.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs">Causas Relacionadas (da Etapa 1)</Label>
+              <div className="space-y-1.5">
+                {availableWhys.map(w => (
+                  <label key={w.number} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={action.related_cause_why === w.number}
+                      onChange={(e) => updateAction(i, 'related_cause_why', e.target.checked ? w.number : null)}
+                      disabled={!action._new}
+                      className="accent-primary rounded"
+                    />
+                    <span className={`${causeAnalysis?.root_cause_why === w.number ? 'text-primary font-medium' : 'text-foreground'}`}>
+                      P{w.number}: {w.text} {causeAnalysis?.root_cause_why === w.number && '🎯'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1 col-span-2">
               <Label className="text-xs">O que fazer? (What) *</Label>
@@ -561,6 +672,11 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles 
               <Input type="number" value={action.cost || ''} onChange={(e) => updateAction(i, 'cost', e.target.value)} placeholder="R$" className="h-9" disabled={!action._new} />
             </div>
           </div>
+          {action._new && (
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => handleSaveAction(action, i)} disabled={loading}>Salvar Ação</Button>
+            </div>
+          )}
         </div>
       ))}
 
@@ -569,15 +685,18 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles 
       )}
 
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="outline" onClick={handleSave} disabled={loading}>Salvar Rascunho</Button>
-        <Button size="sm" onClick={handleComplete} disabled={loading}>Concluir Plano e Avançar</Button>
+        <Button size="sm" onClick={handleComplete} disabled={loading || actions.length === 0}>Concluir Plano e Avançar</Button>
       </div>
     </div>
   );
 }
 
-function ActionPlanReadonly({ actions, profiles, showImplementation }: any) {
+function ActionPlanReadonly({ actions, profiles, showImplementation, causeAnalysis }: any) {
   const getProfileName = (userId: string) => profiles.find((p: any) => p.user_id === userId)?.full_name || '';
+  const getWhyText = (num: number | null) => {
+    if (!num || !causeAnalysis) return null;
+    return causeAnalysis[`why_${num}`];
+  };
   return (
     <div className="mt-3">
       <h4 className="text-sm font-medium mb-2">Plano de Ação ({actions.length} ações)</h4>
@@ -585,6 +704,9 @@ function ActionPlanReadonly({ actions, profiles, showImplementation }: any) {
         {actions.map((a: any, i: number) => (
           <div key={a.id} className="bg-muted/50 rounded p-3 text-sm">
             <p className="font-medium">Ação {i + 1}: {a.what_to_do}</p>
+            {a.related_cause_why && (
+              <p className="text-xs text-primary mt-0.5">Causa: P{a.related_cause_why} — {getWhyText(a.related_cause_why)}</p>
+            )}
             <div className="grid grid-cols-3 gap-2 mt-1 text-xs text-muted-foreground">
               <span>Responsável: {getProfileName(a.responsible_user_id)}</span>
               <span>Prazo: {new Date(a.deadline).toLocaleDateString('pt-BR')}</span>
@@ -601,24 +723,33 @@ function ActionPlanReadonly({ actions, profiles, showImplementation }: any) {
 }
 
 /* ======================== VALIDATION ======================== */
-function ValidationForm({ stageId, rncId, queryClient, stageName }: any) {
+function ValidationForm({ stageId, rncId, rnc, queryClient, sectors }: any) {
   const [rejectionReason, setRejectionReason] = useState('');
   const [reject, setReject] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editCriticality, setEditCriticality] = useState<CritLevel>(rnc.criticality);
+  const [editType, setEditType] = useState<OccurrenceType>(rnc.reclassified_type || rnc.occurrence_type);
 
   const handleValidate = async () => {
     setLoading(true);
     try {
+      // Save any edits to criticality/type
+      await supabase.from('rnc_occurrences').update({
+        criticality: editCriticality,
+        reclassified_type: editType,
+      }).eq('id', rncId);
+
       if (reject) {
         await supabase.from('rnc_stages').update({ status: 'reprovado', rejection_reason: rejectionReason }).eq('id', stageId);
-        // Go back to stage 2 (Plano de Ação)
+        // Reopen stages 1 and 2
+        const { data: stage1 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 1).single();
         const { data: stage2 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
+        if (stage1) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage1.id);
         if (stage2) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage2.id);
-        await supabase.from('rnc_occurrences').update({ status: 'plano_acao' }).eq('id', rncId);
-        toast.info('Validação reprovada. Retornando ao Plano de Ação.');
+        await supabase.from('rnc_occurrences').update({ status: 'analise_causa' }).eq('id', rncId);
+        toast.info('Validação reprovada. Etapas 1 e 2 reabertas para edição.');
       } else {
         await supabase.from('rnc_stages').update({ status: 'aprovado', completed_at: new Date().toISOString() }).eq('id', stageId);
-        // Activate stage 4
         const { data: nextStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 4).single();
         if (nextStage) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
         await supabase.from('rnc_occurrences').update({ status: 'implementacao' }).eq('id', rncId);
@@ -630,16 +761,42 @@ function ValidationForm({ stageId, rncId, queryClient, stageName }: any) {
   };
 
   return (
-    <div className="mt-3 space-y-3">
-      <p className="text-sm text-muted-foreground">O setor especializado deve validar o plano de ação proposto.</p>
+    <div className="mt-3 space-y-4">
+      <p className="text-sm text-muted-foreground">O setor especializado pode editar informações da ocorrência e validar as etapas 1 e 2.</p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-xs">Criticidade</Label>
+          <Select value={editCriticality} onValueChange={(v) => setEditCriticality(v as CritLevel)}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="alta">Alta</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Tipo de Ocorrência</Label>
+          <Select value={editType} onValueChange={(v) => setEditType(v as OccurrenceType)}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="real">Real (NC)</SelectItem>
+              <SelectItem value="potencial">Potencial</SelectItem>
+              <SelectItem value="oportunidade">Oportunidade de Melhoria</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <Checkbox checked={reject} onCheckedChange={(c) => setReject(!!c)} />
-        <Label className="text-sm">Reprovar e devolver ao Plano de Ação</Label>
+        <Label className="text-sm">Reprovar e devolver para revisão (Etapas 1 e 2)</Label>
       </div>
       {reject && (
         <div className="space-y-1">
           <Label className="text-xs">Motivo da reprovação *</Label>
-          <Textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Justifique..." rows={2} />
+          <Textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Justifique a reprovação..." rows={2} />
         </div>
       )}
       <div className="flex justify-end">
@@ -655,21 +812,37 @@ function ValidationForm({ stageId, rncId, queryClient, stageName }: any) {
 /* ======================== IMPLEMENTATION ======================== */
 function ImplementationForm({ actions, user, queryClient, rncId, stageId, sectors }: any) {
   const [evidence, setEvidence] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, File | null>>({});
   const [validationSector, setValidationSector] = useState('');
   const [validationDeadline, setValidationDeadline] = useState('');
   const [loading, setLoading] = useState(false);
 
   const allImplemented = actions.every((a: any) => a.is_implemented);
 
+  const handleFileChange = (actionId: string, file: File | null) => {
+    setFiles({ ...files, [actionId]: file });
+  };
+
   const handleImplement = async (actionId: string) => {
     setLoading(true);
     try {
+      let filePath = null;
+      const file = files[actionId];
+      if (file) {
+        const ext = file.name.split('.').pop();
+        const path = `${rncId}/${actionId}/evidence.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('rnc-attachments').upload(path, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        filePath = path;
+      }
+
       await supabase.from('rnc_actions').update({
         is_implemented: true, implemented_at: new Date().toISOString(),
         evidence: evidence[actionId] || '',
+        evidence_file_path: filePath,
       }).eq('id', actionId);
       queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
-      toast.success('Ação implementada');
+      toast.success('Ação implementada e salva');
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
@@ -679,7 +852,6 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-      // Update stage 5 with sector and deadline
       const { data: stage5 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 5).single();
       if (stage5) {
         await supabase.from('rnc_stages').update({
@@ -697,28 +869,50 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
   return (
     <div className="mt-3 space-y-3">
       <h4 className="text-sm font-medium">Implementação das Ações</h4>
-      {actions.filter((a: any) => !a.is_implemented).map((action: any) => (
-        <div key={action.id} className="bg-muted/50 rounded p-3 space-y-2">
-          <p className="text-sm font-medium">{action.what_to_do}</p>
-          <div className="space-y-1">
-            <Label className="text-xs">Evidência da implementação</Label>
-            <Textarea value={evidence[action.id] || ''} onChange={(e) => setEvidence({ ...evidence, [action.id]: e.target.value })}
-              placeholder="Descreva a evidência..." rows={2} />
+      <p className="text-xs text-muted-foreground">Implemente cada ação individualmente. Só será possível avançar quando todas estiverem concluídas.</p>
+
+      {actions.map((action: any, idx: number) => (
+        <div key={action.id} className={`rounded-lg p-4 space-y-2 border ${action.is_implemented ? 'bg-primary/5 border-primary/20' : 'bg-muted/50'}`}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Ação {idx + 1}: {action.what_to_do}</p>
+            {action.is_implemented && <Badge variant="default" className="text-xs">✅ Implementada</Badge>}
           </div>
-          <Button size="sm" onClick={() => handleImplement(action.id)} disabled={loading}>Marcar como Implementada</Button>
+          {action.related_cause_why && (
+            <p className="text-xs text-primary">Causa P{action.related_cause_why}</p>
+          )}
+          {!action.is_implemented ? (
+            <>
+              <div className="space-y-1">
+                <Label className="text-xs">Evidência da implementação *</Label>
+                <Textarea value={evidence[action.id] || ''} onChange={(e) => setEvidence({ ...evidence, [action.id]: e.target.value })}
+                  placeholder="Descreva a evidência..." rows={2} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Anexo (opcional)</Label>
+                <Input type="file" onChange={(e) => handleFileChange(action.id, e.target.files?.[0] || null)} className="h-9" />
+              </div>
+              <Button size="sm" onClick={() => handleImplement(action.id)} disabled={loading}>
+                Salvar Implementação
+              </Button>
+            </>
+          ) : (
+            <div className="text-xs text-muted-foreground">
+              {action.evidence && <p>Evidência: {action.evidence}</p>}
+              {action.evidence_file_path && <p className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> Anexo enviado</p>}
+              {action.implemented_at && <p>Implementada em: {new Date(action.implemented_at).toLocaleDateString('pt-BR')}</p>}
+            </div>
+          )}
         </div>
       ))}
 
-      {actions.filter((a: any) => a.is_implemented).length > 0 && (
-        <div className="text-sm text-muted-foreground">
-          ✅ {actions.filter((a: any) => a.is_implemented).length} de {actions.length} ações implementadas
-        </div>
-      )}
+      <div className="text-sm text-muted-foreground">
+        ✅ {actions.filter((a: any) => a.is_implemented).length} de {actions.length} ações implementadas
+      </div>
 
       {allImplemented && (
         <div className="border-t pt-4 space-y-3">
           <h4 className="text-sm font-medium">Finalizar Implementação</h4>
-          <p className="text-xs text-muted-foreground">Selecione o setor especializado e o prazo para a análise de eficácia.</p>
+          <p className="text-xs text-muted-foreground">Selecione o setor e prazo para a análise de eficácia.</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Setor para Análise de Eficácia *</Label>
@@ -733,7 +927,7 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
             </div>
           </div>
           <Button onClick={handleFinishStage} disabled={loading}>
-            {loading ? 'Processando...' : 'Finalizar Implementação e Agendar Eficácia'}
+            {loading ? 'Processando...' : 'Finalizar e Agendar Eficácia'}
           </Button>
         </div>
       )}
@@ -745,16 +939,27 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
 function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
   const [isEffective, setIsEffective] = useState<boolean | null>(existing?.is_effective ?? null);
   const [evidence, setEvidence] = useState(existing?.evidence || '');
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
     if (isEffective === null) { toast.error('Selecione se foi eficaz ou ineficaz'); return; }
     setLoading(true);
     try {
+      let filePath = existing?.evidence_file_path || null;
+      if (file) {
+        const ext = file.name.split('.').pop();
+        const path = `${rncId}/efficacy/evidence.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('rnc-attachments').upload(path, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        filePath = path;
+      }
+
       if (existing) {
         await supabase.from('rnc_efficacy').update({
           is_effective: isEffective, evidence, evaluated_by: user.id,
           evaluation_date: new Date().toISOString().split('T')[0],
+          evidence_file_path: filePath,
         }).eq('id', existing.id);
       }
 
@@ -763,7 +968,6 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
         toast.success('RNC concluída com eficácia!');
       } else {
-        // Return to stage 2 (Plano de Ação)
         await supabase.from('rnc_stages').update({ status: 'reprovado' }).eq('id', stageId);
         const { data: stage2 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
         if (stage2) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage2.id);
@@ -782,7 +986,7 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         {existing?.scheduled_date && `Data agendada: ${new Date(existing.scheduled_date).toLocaleDateString('pt-BR')}`}
       </p>
       <div className="flex gap-3">
-        <label className={`flex items-center gap-2 px-4 py-2 rounded-md border cursor-pointer text-sm ${isEffective === true ? 'border-risk-low bg-risk-low-light' : 'border-border'}`}>
+        <label className={`flex items-center gap-2 px-4 py-2 rounded-md border cursor-pointer text-sm ${isEffective === true ? 'border-primary bg-primary/5' : 'border-border'}`}>
           <input type="radio" name="efficacy" checked={isEffective === true} onChange={() => setIsEffective(true)} className="accent-primary" />
           Eficaz
         </label>
@@ -792,8 +996,15 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         </label>
       </div>
       <div className="space-y-1">
-        <Label>Evidência</Label>
+        <Label>Evidência *</Label>
         <Textarea value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="Descreva a evidência..." />
+      </div>
+      <div className="space-y-1">
+        <Label>Anexo (opcional)</Label>
+        <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="h-9" />
+        {existing?.evidence_file_path && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><Paperclip className="h-3 w-3" /> Anexo existente</p>
+        )}
       </div>
       <Button onClick={handleSave} disabled={loading}>{loading ? 'Salvando...' : 'Salvar Avaliação'}</Button>
     </div>

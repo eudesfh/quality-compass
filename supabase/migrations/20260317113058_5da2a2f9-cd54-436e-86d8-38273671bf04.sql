@@ -1,0 +1,1 @@
+ALTER TABLE public.risks ADD COLUMN IF NOT EXISTS company_type public.company_type DEFAULT NULL;

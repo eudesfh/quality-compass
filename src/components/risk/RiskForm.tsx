@@ -52,6 +52,7 @@ export default function RiskForm() {
   const [status, setStatus] = useState<RiskStatus | ''>('');
   const [sectorId, setSectorId] = useState('');
   const [companyId, setCompanyId] = useState('');
+  const [companyType, setCompanyType] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { data: companies = [] } = useQuery({
@@ -86,6 +87,7 @@ export default function RiskForm() {
         response, frequency: frequency || null,
         treatment: treatment || null, deadline: deadline || null,
         status, sector_id: sectorId || null, company_id: companyId || null,
+        company_type: companyType || null,
         created_by: user.id,
       });
       if (error) throw error;
@@ -175,12 +177,22 @@ export default function RiskForm() {
             <Label>Tratativa da Causa do Risco</Label>
             <Textarea value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={3} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Empresa</Label>
               <Select value={companyId} onValueChange={setCompanyId}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo Empresa</Label>
+              <Select value={companyType} onValueChange={setCompanyType}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="obra">Obra</SelectItem>
+                  <SelectItem value="escritorio">Escritório</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
