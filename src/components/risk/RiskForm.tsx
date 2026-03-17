@@ -177,12 +177,22 @@ export default function RiskForm() {
             <Label>Tratativa da Causa do Risco</Label>
             <Textarea value={treatment} onChange={(e) => setTreatment(e.target.value)} rows={3} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Empresa</Label>
               <Select value={companyId} onValueChange={setCompanyId}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo Empresa</Label>
+              <Select value={companyType} onValueChange={setCompanyType}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="obra">Obra</SelectItem>
+                  <SelectItem value="escritorio">Escritório</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
