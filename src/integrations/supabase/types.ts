@@ -221,6 +221,7 @@ export type Database = {
           cause_source: string | null
           code: string
           company_id: string | null
+          company_type: Database["public"]["Enums"]["company_type"] | null
           consequence: string | null
           created_at: string
           created_by: string
@@ -242,6 +243,7 @@ export type Database = {
           cause_source?: string | null
           code: string
           company_id?: string | null
+          company_type?: Database["public"]["Enums"]["company_type"] | null
           consequence?: string | null
           created_at?: string
           created_by: string
@@ -263,6 +265,7 @@ export type Database = {
           cause_source?: string | null
           code?: string
           company_id?: string | null
+          company_type?: Database["public"]["Enums"]["company_type"] | null
           consequence?: string | null
           created_at?: string
           created_by?: string
