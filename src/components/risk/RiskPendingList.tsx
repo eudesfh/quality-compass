@@ -25,6 +25,7 @@ const classConfig: Record<string, { label: string; className: string }> = {
 };
 
 export default function RiskPendingList() {
+  const { setSelectedRiskId } = useModule();
   const { data: risks = [], isLoading } = useQuery({
     queryKey: ['risk-list', 'pending'],
     queryFn: async () => {
