@@ -15,7 +15,7 @@ const modules: { key: Module; label: string }[] = [
 ];
 
 export default function TopNav() {
-  const { activeModule, setActiveModule, setActiveView, setShowAdminPanel, setSelectedRNCId } = useModule();
+  const { activeModule, setActiveModule, setActiveView, setShowAdminPanel, setSelectedRNCId, setSelectedRiskId } = useModule();
   const { profile, isAdmin, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -39,12 +39,14 @@ export default function TopNav() {
     setActiveModule(mod);
     setActiveView('inicio');
     setSelectedRNCId(null);
+    setSelectedRiskId(null);
     setShowAdminPanel(false);
   };
 
   const handleNavClick = (view: 'inicio') => {
     setActiveView(view);
     setSelectedRNCId(null);
+    setSelectedRiskId(null);
     setShowAdminPanel(false);
   };
 
@@ -58,6 +60,24 @@ export default function TopNav() {
     if (unread.length === 0) return;
     await Promise.all(unread.map(n => supabase.from('notifications').update({ is_read: true }).eq('id', n.id)));
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  };
+
+  const handleNotificationClick = async (n: any) => {
+    await markAsRead(n.id);
+    setNotifOpen(false);
+    if (n.reference_type === 'rnc' && n.reference_id) {
+      setActiveModule('rnc');
+      setActiveView('inicio');
+      setShowAdminPanel(false);
+      setSelectedRiskId(null);
+      setSelectedRNCId(n.reference_id);
+    } else if (n.reference_type === 'risk' && n.reference_id) {
+      setActiveModule('risk');
+      setActiveView('inicio');
+      setShowAdminPanel(false);
+      setSelectedRNCId(null);
+      setSelectedRiskId(n.reference_id);
+    }
   };
 
   return (
@@ -113,7 +133,7 @@ export default function TopNav() {
                     {notifications.map(n => (
                       <button
                         key={n.id}
-                        onClick={() => markAsRead(n.id)}
+                        onClick={() => handleNotificationClick(n)}
                         className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${!n.is_read ? 'bg-primary/5' : ''}`}
                       >
                         <p className={`text-sm ${!n.is_read ? 'font-medium' : ''}`}>{n.title}</p>
@@ -139,7 +159,7 @@ export default function TopNav() {
               </div>
               <DropdownMenuSeparator />
               {isAdmin && (
-                <DropdownMenuItem onClick={() => { setShowAdminPanel(true); setSelectedRNCId(null); }}>
+                <DropdownMenuItem onClick={() => { setShowAdminPanel(true); setSelectedRNCId(null); setSelectedRiskId(null); }}>
                   <Settings className="h-4 w-4 mr-2" />
                   Administração
                 </DropdownMenuItem>

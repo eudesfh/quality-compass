@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,30 +13,33 @@ import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type OccurrenceType = Database['public']['Enums']['occurrence_type'];
-type CriticalityLevel = Database['public']['Enums']['criticality_level'];
 type CompanyType = Database['public']['Enums']['company_type'];
 
 const ORIGINS = [
   'Auditoria Interna', 'Processos', 'Produto',
-  'Reclamação do Cliente', 'Indicadores', 'Acidente de Trabalho (CAT)'
+  'Reclamação do Cliente', 'Indicadores', 'Acidente de Trabalho (CAT)',
+  'Gestão de Riscos', 'Oportunidade de Melhoria'
 ];
 
 export default function RNCForm() {
-  const { setShowRNCForm } = useModule();
+  const { setShowRNCForm, rncPreFill, setRncPreFill } = useModule();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [type, setType] = useState<OccurrenceType | ''>('');
-  const [subject, setSubject] = useState('');
-  const [description, setDescription] = useState('');
-  const [criticality, setCriticality] = useState<CriticalityLevel | ''>('');
+  const [type, setType] = useState<OccurrenceType | ''>(rncPreFill?.occurrence_type || '');
+  const [subject, setSubject] = useState(rncPreFill?.subject || '');
+  const [description, setDescription] = useState(rncPreFill?.description || '');
   const [date, setDate] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [companyType, setCompanyType] = useState<CompanyType | ''>('');
   const [sectorId, setSectorId] = useState('');
-  const [origin, setOrigin] = useState('');
+  const [origin, setOrigin] = useState(rncPreFill?.origin || '');
   const [approverId, setApproverId] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    return () => setRncPreFill(null);
+  }, [setRncPreFill]);
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies'],
@@ -70,7 +73,6 @@ export default function RNCForm() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
     const images = selected.filter(f => f.type.startsWith('image/'));
-    const others = selected.filter(f => !f.type.startsWith('image/'));
     if (images.length > 3) { toast.error('Máximo de 3 imagens'); return; }
     const tooLarge = selected.find(f => f.size > 5 * 1024 * 1024);
     if (tooLarge) { toast.error('Arquivos devem ter no máximo 5MB'); return; }
@@ -79,7 +81,7 @@ export default function RNCForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!type || !subject || !criticality || !date || !companyId || !companyType || !sectorId || !origin || !approverId) {
+    if (!type || !subject || !date || !companyId || !companyType || !sectorId || !origin || !approverId) {
       toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
@@ -94,7 +96,7 @@ export default function RNCForm() {
           occurrence_type: type,
           subject,
           description,
-          criticality,
+          criticality: 'media', // Default; will be set in Triagem
           occurrence_date: date,
           company_id: companyId,
           company_type: companyType,
@@ -109,13 +111,11 @@ export default function RNCForm() {
 
       if (error) throw error;
 
-      // Add creator and approver as participants
       await supabase.from('rnc_participants').insert([
         { rnc_id: rnc.id, user_id: user.id, role: 'creator' },
         { rnc_id: rnc.id, user_id: approverId, role: 'approver' },
       ]);
 
-      // Upload files
       for (const file of files) {
         const path = `${rnc.id}/${Date.now()}-${file.name}`;
         const { error: uploadError } = await supabase.storage
@@ -133,7 +133,6 @@ export default function RNCForm() {
         }
       }
 
-      // Create notification for approver
       await supabase.from('notifications').insert({
         user_id: approverId,
         title: 'Nova RNC para aprovação',
@@ -144,7 +143,7 @@ export default function RNCForm() {
       });
 
       queryClient.invalidateQueries({ queryKey: ['rnc-list'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications-count'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       toast.success(`RNC ${rnc.code} registrada com sucesso!`);
       setShowRNCForm(false);
     } catch (error: any) {
@@ -169,8 +168,7 @@ export default function RNCForm() {
             <Label className="text-sm font-medium">Tipo de Ocorrência *</Label>
             <div className="flex gap-3 flex-wrap">
               {([
-                { value: 'real' as const, label: 'Real (Já ocorrida)' },
-                { value: 'potencial' as const, label: 'Potencial (Pode ocorrer)' },
+                { value: 'real' as const, label: 'Real (Não Conformidade)' },
                 { value: 'oportunidade' as const, label: 'Oportunidade de Melhoria' },
               ]).map((opt) => (
                 <label key={opt.value} className={`flex items-center gap-2 px-4 py-2.5 rounded-md border cursor-pointer transition-colors text-sm ${
@@ -195,17 +193,6 @@ export default function RNCForm() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Criticidade *</Label>
-              <Select value={criticality} onValueChange={(v) => setCriticality(v as CriticalityLevel)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">🟢 Baixa</SelectItem>
-                  <SelectItem value="media">🟡 Média</SelectItem>
-                  <SelectItem value="alta">🔴 Alta</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="date">Data da Ocorrência *</Label>
               <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -236,7 +223,7 @@ export default function RNCForm() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Setor *</Label>
+              <Label>Setor Receptor *</Label>
               <Select value={sectorId} onValueChange={setSectorId}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
