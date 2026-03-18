@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useModule } from '@/contexts/ModuleContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
@@ -23,6 +24,7 @@ const getRiskClass = (level: number) => {
 };
 
 export default function RiskConsultas() {
+  const { setSelectedRiskId } = useModule();
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<FilterValues>({
     dateFrom: '', dateTo: '', company: 'all', companyType: 'all', sector: 'all', status: 'all',
@@ -92,7 +94,7 @@ export default function RiskConsultas() {
                 const level = risk.risk_level || (risk.probability * risk.severity);
                 const cls = getRiskClass(level);
                 return (
-                  <tr key={risk.id} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
+                  <tr key={risk.id} onClick={() => setSelectedRiskId(risk.id)} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
                     <td className="px-4 py-3 font-medium text-primary">{risk.code}</td>
                     <td className="px-4 py-3 max-w-[300px] truncate">{risk.risk_description}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className={cls.className + ' border-0 text-xs'}>{cls.label} ({level})</Badge></td>

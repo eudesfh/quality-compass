@@ -1,5 +1,6 @@
-import { Clock, CheckCircle2 } from 'lucide-react';
+import { Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useModule } from '@/contexts/ModuleContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
@@ -24,6 +25,7 @@ const classConfig: Record<string, { label: string; className: string }> = {
 };
 
 export default function RiskPendingList() {
+  const { setSelectedRiskId } = useModule();
   const { data: risks = [], isLoading } = useQuery({
     queryKey: ['risk-list', 'pending'],
     queryFn: async () => {
@@ -58,7 +60,8 @@ export default function RiskPendingList() {
             const level = risk.risk_level || (risk.probability * risk.severity);
             const cls = classConfig[String(level)] || classConfig['1'];
             return (
-              <div key={risk.id} className="bg-card border rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer">
+              <div key={risk.id} onClick={() => setSelectedRiskId(risk.id)}
+                className="bg-card border rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer group">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">

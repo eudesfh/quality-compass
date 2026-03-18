@@ -11,11 +11,12 @@ import RiskForm from '@/components/risk/RiskForm';
 import RiskPendingList from '@/components/risk/RiskPendingList';
 import RiskConsultas from '@/components/risk/RiskConsultas';
 import RiskDashboard from '@/components/risk/RiskDashboard';
+import RiskDetail from '@/components/risk/RiskDetail';
 import AdminPanel from '@/components/admin/AdminPanel';
 import AuthPage from '@/pages/AuthPage';
 
 function ModuleContent() {
-  const { activeModule, activeView, showRNCForm, showRiskForm, selectedRNCId, showAdminPanel } = useModule();
+  const { activeModule, activeView, showRNCForm, showRiskForm, selectedRNCId, selectedRiskId, showAdminPanel } = useModule();
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -31,6 +32,7 @@ function ModuleContent() {
   const renderContent = () => {
     if (showAdminPanel) return <AdminPanel />;
     if (selectedRNCId && activeModule === 'rnc') return <RNCDetail />;
+    if (selectedRiskId && activeModule === 'risk') return <RiskDetail />;
 
     if (activeModule === 'rnc') {
       switch (activeView) {
@@ -51,7 +53,7 @@ function ModuleContent() {
     <div className={`min-h-screen bg-background ${activeModule === 'rnc' ? 'module-rnc' : 'module-risk'}`}>
       <TopNav />
       {!showAdminPanel && <SubNav />}
-      <main className={activeView === 'consultas' && !showAdminPanel && !selectedRNCId ? '' : 'max-w-7xl mx-auto'}>
+      <main className={activeView === 'consultas' && !showAdminPanel && !selectedRNCId && !selectedRiskId ? '' : 'max-w-7xl mx-auto'}>
         {renderContent()}
       </main>
       {showRNCForm && <RNCForm />}

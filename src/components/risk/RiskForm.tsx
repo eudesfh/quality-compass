@@ -81,13 +81,13 @@ export default function RiskForm() {
     setLoading(true);
     try {
       const { error } = await supabase.from('risks').insert({
-        code: 'TEMP',
+        code: 'TEMP-' + Date.now(),
         risk_description: risk, cause, cause_source: causeSource || null,
         consequence: consequence || null, probability, severity,
-        response, frequency: frequency || null,
+        response: response as any, frequency: (frequency || null) as any,
         treatment: treatment || null, deadline: deadline || null,
-        status, sector_id: sectorId || null, company_id: companyId || null,
-        company_type: companyType || null,
+        status: status as any, sector_id: sectorId || null, company_id: companyId || null,
+        company_type: (companyType || null) as any,
         created_by: user.id,
       });
       if (error) throw error;

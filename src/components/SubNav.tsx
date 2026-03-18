@@ -9,13 +9,14 @@ const views: { key: SubView; label: string; icon: typeof Home }[] = [
 ];
 
 export default function SubNav() {
-  const { activeModule, activeView, setActiveView, setShowRNCForm, setShowRiskForm, showAdminPanel, setSelectedRNCId, setShowAdminPanel } = useModule();
+  const { activeModule, activeView, setActiveView, setShowRNCForm, setShowRiskForm, showAdminPanel, setSelectedRNCId, setSelectedRiskId, setShowAdminPanel } = useModule();
 
   if (showAdminPanel) return null;
 
   const handleViewChange = (view: SubView) => {
     setActiveView(view);
     setSelectedRNCId(null);
+    setSelectedRiskId(null);
     setShowAdminPanel(false);
   };
 
