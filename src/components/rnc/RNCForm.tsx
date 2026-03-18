@@ -90,7 +90,7 @@ export default function RNCForm() {
       const { data: rnc, error } = await supabase
         .from('rnc_occurrences')
         .insert({
-          code: 'TEMP',
+          code: 'TEMP-' + Date.now(),
           occurrence_type: type,
           subject,
           description,
