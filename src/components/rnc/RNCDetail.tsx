@@ -1023,19 +1023,7 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
       {allImplemented && (
         <div className="border-t pt-4 space-y-3">
           <h4 className="text-sm font-medium">Finalizar Implementação</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Setor para Eficácia *</Label>
-              <Select value={validationSector} onValueChange={setValidationSector}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Prazo *</Label>
-              <Input type="date" value={validationDeadline} onChange={(e) => setValidationDeadline(e.target.value)} className="h-9" />
-            </div>
-          </div>
+          <p className="text-xs text-muted-foreground">Todas as ações foram implementadas. Clique para avançar para a análise de eficácia.</p>
           <Button onClick={handleFinishStage} disabled={loading}>{loading ? 'Processando...' : 'Finalizar e Agendar Eficácia'}</Button>
         </div>
       )}

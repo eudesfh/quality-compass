@@ -279,7 +279,7 @@ export default function RNCForm() {
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => setShowRNCForm(false)}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>{loading ? 'Enviando...' : 'Enviar RNC'}</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Enviando...' : 'Enviar'}</Button>
           </div>
         </form>
       </div>
