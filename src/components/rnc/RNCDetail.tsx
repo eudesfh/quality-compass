@@ -31,7 +31,7 @@ const typeLabels: Record<OccurrenceType, string> = {
 // Stages for "Real" type
 const REAL_STAGES = ['Análise de Causa', 'Plano de Ação', 'Validação', 'Implementação', 'Análise de Eficácia'];
 // Stages for "Oportunidade" type
-const OPORTUNIDADE_STAGES = ['Plano de Ação'];
+const OPORTUNIDADE_STAGES = ['Plano de Ação', 'Implementação'];
 
 function getStageNames(occType: OccurrenceType): string[] {
   return occType === 'oportunidade' ? OPORTUNIDADE_STAGES : REAL_STAGES;
