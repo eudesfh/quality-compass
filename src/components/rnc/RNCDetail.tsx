@@ -739,11 +739,13 @@ function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClien
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-      await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
+      const { data: nextStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
+      if (nextStage) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
+      await supabase.from('rnc_occurrences').update({ status: 'implementacao' }).eq('id', rncId);
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-list'] });
-      toast.success('Oportunidade de melhoria concluída!');
+      toast.success('Plano de ação concluído. Próxima etapa: Implementação.');
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
