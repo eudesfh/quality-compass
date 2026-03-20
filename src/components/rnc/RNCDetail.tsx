@@ -1038,8 +1038,8 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
       {allImplemented && (
         <div className="border-t pt-4 space-y-3">
           <h4 className="text-sm font-medium">Finalizar Implementação</h4>
-          <p className="text-xs text-muted-foreground">Todas as ações foram implementadas. Clique para avançar para a análise de eficácia.</p>
-          <Button onClick={handleFinishStage} disabled={loading}>{loading ? 'Processando...' : 'Finalizar e Agendar Eficácia'}</Button>
+          <p className="text-xs text-muted-foreground">Todas as ações foram implementadas. {isOportunidade ? 'Clique para concluir.' : 'Clique para avançar para a análise de eficácia.'}</p>
+          <Button onClick={handleFinishStage} disabled={loading}>{loading ? 'Processando...' : isOportunidade ? 'Concluir Oportunidade' : 'Finalizar e Agendar Eficácia'}</Button>
         </div>
       )}
     </div>
