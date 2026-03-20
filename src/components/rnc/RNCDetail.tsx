@@ -973,17 +973,15 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
   };
 
   const handleFinishStage = async () => {
-    if (!validationSector) { toast.error('Selecione o setor para eficácia'); return; }
-    if (!validationDeadline) { toast.error('Defina o prazo'); return; }
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-      const { data: stage5 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 5).single();
+      const { data: stage5 } = await supabase.from('rnc_stages').select('id, responsible_sector_id').eq('rnc_id', rncId).eq('stage_number', 5).single();
       if (stage5) {
-        await supabase.from('rnc_stages').update({ status: 'em_andamento', responsible_sector_id: validationSector, deadline: validationDeadline }).eq('id', stage5.id);
+        await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage5.id);
       }
       await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
-      await supabase.from('rnc_efficacy').insert({ rnc_id: rncId, scheduled_date: validationDeadline });
+      await supabase.from('rnc_efficacy').insert({ rnc_id: rncId });
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
       toast.success('Implementação finalizada. Eficácia agendada.');
