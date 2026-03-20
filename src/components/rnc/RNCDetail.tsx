@@ -327,7 +327,7 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           )}
 
           {stage.stage_number === 4 && isActive && (
-            <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} />
+            <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} isOportunidade={false} />
           )}
           {stage.stage_number === 4 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation causeAnalysis={causeAnalysis} />
