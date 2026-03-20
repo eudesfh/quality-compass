@@ -31,7 +31,7 @@ const typeLabels: Record<OccurrenceType, string> = {
 // Stages for "Real" type
 const REAL_STAGES = ['Análise de Causa', 'Plano de Ação', 'Validação', 'Implementação', 'Análise de Eficácia'];
 // Stages for "Oportunidade" type
-const OPORTUNIDADE_STAGES = ['Plano de Ação'];
+const OPORTUNIDADE_STAGES = ['Plano de Ação', 'Implementação'];
 
 function getStageNames(occType: OccurrenceType): string[] {
   return occType === 'oportunidade' ? OPORTUNIDADE_STAGES : REAL_STAGES;
@@ -286,14 +286,20 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
       )}
 
       {isOportunidade ? (
-        // Oportunidade: only stage 1 = Plano de Ação
+        // Oportunidade: stage 1 = Plano de Ação, stage 2 = Implementação
         <>
-          {isActive && (
+          {stage.stage_number === 1 && isActive && (
             <ActionPlanFormOportunidade rncId={rnc.id} stageId={stage.id} existing={actions}
               user={user} queryClient={queryClient} profiles={profiles} />
           )}
-          {!isActive && actions.length > 0 && (
+          {stage.stage_number === 1 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={null} />
+          )}
+          {stage.stage_number === 2 && isActive && (
+            <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} isOportunidade={true} />
+          )}
+          {stage.stage_number === 2 && !isActive && actions.length > 0 && (
+            <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation causeAnalysis={null} />
           )}
         </>
       ) : (
@@ -321,7 +327,7 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           )}
 
           {stage.stage_number === 4 && isActive && (
-            <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} />
+            <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} isOportunidade={false} />
           )}
           {stage.stage_number === 4 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation causeAnalysis={causeAnalysis} />
@@ -378,9 +384,10 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
         }).eq('id', rncId);
 
         if (isOportunidade) {
-          // Only 1 stage for oportunidade
+          // 2 stages for oportunidade: Plano de Ação + Implementação
           await supabase.from('rnc_stages').insert([
             { rnc_id: rncId, stage_number: 1, stage_name: 'Plano de Ação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, deadline: stage1Deadline || null, status: 'em_andamento' as const },
+            { rnc_id: rncId, stage_number: 2, stage_name: 'Implementação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
           ]);
         } else {
           // 5 stages for Real
@@ -732,11 +739,13 @@ function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClien
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-      await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
+      const { data: nextStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
+      if (nextStage) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
+      await supabase.from('rnc_occurrences').update({ status: 'implementacao' }).eq('id', rncId);
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-list'] });
-      toast.success('Oportunidade de melhoria concluída!');
+      toast.success('Plano de ação concluído. Próxima etapa: Implementação.');
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
@@ -942,7 +951,7 @@ function ValidationForm({ stageId, rncId, rnc, queryClient, sectors }: any) {
 }
 
 /* ======================== IMPLEMENTATION ======================== */
-function ImplementationForm({ actions, user, queryClient, rncId, stageId, sectors }: any) {
+function ImplementationForm({ actions, user, queryClient, rncId, stageId, sectors, isOportunidade }: any) {
   const [evidence, setEvidence] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, File | null>>({});
   const [validationSector, setValidationSector] = useState('');
@@ -976,15 +985,21 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-      const { data: stage5 } = await supabase.from('rnc_stages').select('id, responsible_sector_id').eq('rnc_id', rncId).eq('stage_number', 5).single();
-      if (stage5) {
-        await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage5.id);
+      if (isOportunidade) {
+        await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
+        toast.success('Oportunidade de melhoria concluída!');
+      } else {
+        const { data: stage5 } = await supabase.from('rnc_stages').select('id, responsible_sector_id').eq('rnc_id', rncId).eq('stage_number', 5).single();
+        if (stage5) {
+          await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage5.id);
+        }
+        await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
+        await supabase.from('rnc_efficacy').insert({ rnc_id: rncId });
+        toast.success('Implementação finalizada. Eficácia agendada.');
       }
-      await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
-      await supabase.from('rnc_efficacy').insert({ rnc_id: rncId });
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
-      toast.success('Implementação finalizada. Eficácia agendada.');
+      queryClient.invalidateQueries({ queryKey: ['rnc-list'] });
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
@@ -1023,8 +1038,8 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
       {allImplemented && (
         <div className="border-t pt-4 space-y-3">
           <h4 className="text-sm font-medium">Finalizar Implementação</h4>
-          <p className="text-xs text-muted-foreground">Todas as ações foram implementadas. Clique para avançar para a análise de eficácia.</p>
-          <Button onClick={handleFinishStage} disabled={loading}>{loading ? 'Processando...' : 'Finalizar e Agendar Eficácia'}</Button>
+          <p className="text-xs text-muted-foreground">Todas as ações foram implementadas. {isOportunidade ? 'Clique para concluir.' : 'Clique para avançar para a análise de eficácia.'}</p>
+          <Button onClick={handleFinishStage} disabled={loading}>{loading ? 'Processando...' : isOportunidade ? 'Concluir Oportunidade' : 'Finalizar e Agendar Eficácia'}</Button>
         </div>
       )}
     </div>
