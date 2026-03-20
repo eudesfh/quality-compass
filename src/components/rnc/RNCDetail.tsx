@@ -985,15 +985,21 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
     setLoading(true);
     try {
       await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-      const { data: stage5 } = await supabase.from('rnc_stages').select('id, responsible_sector_id').eq('rnc_id', rncId).eq('stage_number', 5).single();
-      if (stage5) {
-        await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage5.id);
+      if (isOportunidade) {
+        await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
+        toast.success('Oportunidade de melhoria concluída!');
+      } else {
+        const { data: stage5 } = await supabase.from('rnc_stages').select('id, responsible_sector_id').eq('rnc_id', rncId).eq('stage_number', 5).single();
+        if (stage5) {
+          await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage5.id);
+        }
+        await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
+        await supabase.from('rnc_efficacy').insert({ rnc_id: rncId });
+        toast.success('Implementação finalizada. Eficácia agendada.');
       }
-      await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
-      await supabase.from('rnc_efficacy').insert({ rnc_id: rncId });
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
-      toast.success('Implementação finalizada. Eficácia agendada.');
+      queryClient.invalidateQueries({ queryKey: ['rnc-list'] });
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
