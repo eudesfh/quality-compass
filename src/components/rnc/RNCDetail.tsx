@@ -378,9 +378,10 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
         }).eq('id', rncId);
 
         if (isOportunidade) {
-          // Only 1 stage for oportunidade
+          // 2 stages for oportunidade: Plano de Ação + Implementação
           await supabase.from('rnc_stages').insert([
             { rnc_id: rncId, stage_number: 1, stage_name: 'Plano de Ação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, deadline: stage1Deadline || null, status: 'em_andamento' as const },
+            { rnc_id: rncId, stage_number: 2, stage_name: 'Implementação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
           ]);
         } else {
           // 5 stages for Real
