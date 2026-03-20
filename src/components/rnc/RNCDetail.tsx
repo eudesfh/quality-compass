@@ -951,7 +951,7 @@ function ValidationForm({ stageId, rncId, rnc, queryClient, sectors }: any) {
 }
 
 /* ======================== IMPLEMENTATION ======================== */
-function ImplementationForm({ actions, user, queryClient, rncId, stageId, sectors }: any) {
+function ImplementationForm({ actions, user, queryClient, rncId, stageId, sectors, isOportunidade }: any) {
   const [evidence, setEvidence] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, File | null>>({});
   const [validationSector, setValidationSector] = useState('');
