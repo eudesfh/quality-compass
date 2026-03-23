@@ -562,7 +562,8 @@ function CauseAnalysisForm({ rncId, stageId, existing, user, queryClient }: any)
   };
 
   const handleComplete = async () => {
-    if (!whys.why_1) { toast.error('Preencha ao menos o primeiro porquê'); return; }
+    const filledWhys = [whys.why_1, whys.why_2, whys.why_3, whys.why_4, whys.why_5].filter(w => w?.trim() !== '');
+    if (filledWhys.length < 3) { toast.error('Preencha ao menos 3 porquês'); return; }
     await handleSave();
     setLoading(true);
     try {
@@ -660,6 +661,15 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles,
           message: `Nova ação no plano: ${action.what_to_do}`,
           type: 'rnc', reference_type: 'rnc', reference_id: rncId,
         });
+      } else {
+        const { data, error } = await supabase.from('rnc_actions').update({
+          what_to_do: action.what_to_do, why_to_do: action.why_to_do,
+          how_to_do: action.how_to_do, responsible_user_id: action.responsible_user_id,
+          deadline: action.deadline, cost: action.cost ? parseFloat(action.cost) : null,
+          related_cause_why: action.related_cause_why,
+        }).eq('id', action.id).select().single();
+        if (error) throw error;
+        const updated = [...actions]; updated[index] = data; setActions(updated);
       }
       queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
       toast.success('Ação salva com sucesso');
@@ -726,6 +736,14 @@ function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClien
         }).select().single();
         if (error) throw error;
         const updated = [...actions]; updated[index] = data; setActions(updated);
+      } else {
+        const { data, error } = await supabase.from('rnc_actions').update({
+          what_to_do: action.what_to_do, why_to_do: action.why_to_do,
+          how_to_do: action.how_to_do, responsible_user_id: action.responsible_user_id,
+          deadline: action.deadline, cost: action.cost ? parseFloat(action.cost) : null,
+        }).eq('id', action.id).select().single();
+        if (error) throw error;
+        const updated = [...actions]; updated[index] = data; setActions(updated);
       }
       queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
       toast.success('Ação salva');
@@ -782,7 +800,7 @@ function ActionCard({ action, index, profiles, availableWhys, causeAnalysis, onU
               <label key={w.number} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={action.related_cause_why === w.number}
                   onChange={(e) => onUpdate(index, 'related_cause_why', e.target.checked ? w.number : null)}
-                  disabled={!action._new} className="accent-primary rounded" />
+                  className="accent-primary rounded" />
                 <span className={`${causeAnalysis?.root_cause_why === w.number ? 'text-primary font-medium' : 'text-foreground'}`}>
                   P{w.number}: {w.text} {causeAnalysis?.root_cause_why === w.number && '🎯'}
                 </span>
@@ -795,37 +813,37 @@ function ActionCard({ action, index, profiles, availableWhys, causeAnalysis, onU
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1 col-span-2">
           <Label className="text-xs">O que fazer? (What) *</Label>
-          <Input value={action.what_to_do} onChange={(e) => onUpdate(index, 'what_to_do', e.target.value)} className="h-9" disabled={!action._new} />
+          <Input value={action.what_to_do} onChange={(e) => onUpdate(index, 'what_to_do', e.target.value)} className="h-9" />
         </div>
         <div className="space-y-1 col-span-2">
           <Label className="text-xs">Por que fazer? (Why) *</Label>
-          <Input value={action.why_to_do} onChange={(e) => onUpdate(index, 'why_to_do', e.target.value)} className="h-9" disabled={!action._new} />
+          <Input value={action.why_to_do} onChange={(e) => onUpdate(index, 'why_to_do', e.target.value)} className="h-9" />
         </div>
         <div className="space-y-1 col-span-2">
           <Label className="text-xs">Como fazer? (How) *</Label>
-          <Textarea value={action.how_to_do} onChange={(e) => onUpdate(index, 'how_to_do', e.target.value)} rows={2} disabled={!action._new} />
+          <Textarea value={action.how_to_do} onChange={(e) => onUpdate(index, 'how_to_do', e.target.value)} rows={2} />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Responsável (Who) *</Label>
-          <Select value={action.responsible_user_id} onValueChange={(v) => onUpdate(index, 'responsible_user_id', v)} disabled={!action._new}>
+          <Select value={action.responsible_user_id} onValueChange={(v) => onUpdate(index, 'responsible_user_id', v)}>
             <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
             <SelectContent>{profiles.map((p: any) => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Prazo (When) *</Label>
-          <Input type="date" value={action.deadline?.split?.('T')?.[0] || action.deadline || ''} onChange={(e) => onUpdate(index, 'deadline', e.target.value)} className="h-9" disabled={!action._new} />
+          <Input type="date" value={action.deadline?.split?.('T')?.[0] || action.deadline || ''} onChange={(e) => onUpdate(index, 'deadline', e.target.value)} className="h-9" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Custo (How much)</Label>
-          <Input type="number" value={action.cost || ''} onChange={(e) => onUpdate(index, 'cost', e.target.value)} placeholder="R$" className="h-9" disabled={!action._new} />
+          <Input type="number" value={action.cost || ''} onChange={(e) => onUpdate(index, 'cost', e.target.value)} placeholder="R$" className="h-9" />
         </div>
       </div>
-      {action._new && (
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => onSave(action, index)} disabled={loading}>Salvar Ação</Button>
-        </div>
-      )}
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => onSave(action, index)} disabled={loading}>
+          {action._new ? 'Salvar Ação' : 'Atualizar Ação'}
+        </Button>
+      </div>
     </div>
   );
 }
