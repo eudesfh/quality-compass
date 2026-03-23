@@ -676,6 +676,22 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles,
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
+  const handleDeleteAction = async (action: any, index: number) => {
+    if (action._new) {
+      setActions(actions.filter((_, i) => i !== index));
+      return;
+    }
+    if (!confirm('Tem certeza que deseja excluir esta ação?')) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('rnc_actions').delete().eq('id', action.id);
+      if (error) throw error;
+      setActions(actions.filter((_, i) => i !== index));
+      queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
+      toast.success('Ação excluída com sucesso');
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+  };
+
   const handleComplete = async () => {
     if (actions.length === 0) { toast.error('Adicione pelo menos uma ação'); return; }
     const unsaved = actions.filter(a => a._new);
@@ -701,7 +717,7 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles,
       {actions.map((action: any, i: number) => (
         <ActionCard key={action.id || i} action={action} index={i} profiles={profiles}
           availableWhys={availableWhys} causeAnalysis={causeAnalysis}
-          onUpdate={updateAction} onSave={handleSaveAction} loading={loading} />
+          onUpdate={updateAction} onSave={handleSaveAction} onDelete={handleDeleteAction} loading={loading} />
       ))}
       {actions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada.</p>}
       <div className="flex justify-end gap-2">
@@ -750,6 +766,22 @@ function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClien
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
+  const handleDeleteAction = async (action: any, index: number) => {
+    if (action._new) {
+      setActions(actions.filter((_, i) => i !== index));
+      return;
+    }
+    if (!confirm('Tem certeza que deseja excluir esta ação?')) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('rnc_actions').delete().eq('id', action.id);
+      if (error) throw error;
+      setActions(actions.filter((_, i) => i !== index));
+      queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
+      toast.success('Ação excluída com sucesso');
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+  };
+
   const handleComplete = async () => {
     if (actions.length === 0) { toast.error('Adicione pelo menos uma ação'); return; }
     const unsaved = actions.filter(a => a._new);
@@ -776,7 +808,7 @@ function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClien
       {actions.map((action: any, i: number) => (
         <ActionCard key={action.id || i} action={action} index={i} profiles={profiles}
           availableWhys={[]} causeAnalysis={null}
-          onUpdate={updateAction} onSave={handleSaveAction} loading={loading} />
+          onUpdate={updateAction} onSave={handleSaveAction} onDelete={handleDeleteAction} loading={loading} />
       ))}
       {actions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada.</p>}
       <div className="flex justify-end gap-2">
@@ -787,7 +819,7 @@ function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClien
 }
 
 /* ======================== ACTION CARD ======================== */
-function ActionCard({ action, index, profiles, availableWhys, causeAnalysis, onUpdate, onSave, loading }: any) {
+function ActionCard({ action, index, profiles, availableWhys, causeAnalysis, onUpdate, onSave, onDelete, loading }: any) {
   return (
     <div className="bg-muted/50 rounded-lg p-4 space-y-3 border">
       <p className="text-sm font-medium text-foreground">Ação {index + 1} {!action._new && <Badge variant="secondary" className="text-xs ml-2">Salva</Badge>}</p>
@@ -839,7 +871,10 @@ function ActionCard({ action, index, profiles, availableWhys, causeAnalysis, onU
           <Input type="number" value={action.cost || ''} onChange={(e) => onUpdate(index, 'cost', e.target.value)} placeholder="R$" className="h-9" />
         </div>
       </div>
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="destructive" onClick={() => onDelete(action, index)} disabled={loading}>
+          Excluir
+        </Button>
         <Button size="sm" onClick={() => onSave(action, index)} disabled={loading}>
           {action._new ? 'Salvar Ação' : 'Atualizar Ação'}
         </Button>
