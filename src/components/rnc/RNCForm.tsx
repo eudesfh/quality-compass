@@ -34,6 +34,7 @@ export default function RNCForm() {
   const [sectorId, setSectorId] = useState('');
   const [origin, setOrigin] = useState(rncPreFill?.origin || '');
   const [approverId, setApproverId] = useState('');
+  const [criticality, setCriticality] = useState<Database['public']['Enums']['criticality_level'] | ''>('');
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -81,7 +82,7 @@ export default function RNCForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!type || !subject || !date || !companyId || !companyType || !sectorId || !origin || !approverId) {
+    if (!type || !subject || !date || !companyId || !companyType || !sectorId || !origin || !approverId || !criticality) {
       toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
@@ -96,7 +97,7 @@ export default function RNCForm() {
           occurrence_type: type,
           subject,
           description,
-          criticality: 'media', // Default; will be set in Triagem
+          criticality,
           occurrence_date: date,
           company_id: companyId,
           company_type: companyType,
@@ -196,6 +197,17 @@ export default function RNCForm() {
             <div className="space-y-2">
               <Label htmlFor="date">Data da Ocorrência *</Label>
               <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Criticidade *</Label>
+              <Select value={criticality} onValueChange={(v: any) => setCriticality(v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
