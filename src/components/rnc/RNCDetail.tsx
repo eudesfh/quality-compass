@@ -137,6 +137,42 @@ export default function RNCDetail() {
     setShowRNCForm(true);
   };
 
+  const userProfile = profiles.find((p: any) => p.user_id === user?.id);
+  const userSector = sectors.find((s: any) => s.id === userProfile?.sector_id);
+  const isProcessos = userSector?.name?.toLowerCase().includes('processos');
+  const canDeleteDirectly = activeStageNum <= 2 || isAdmin || isProcessos;
+
+  const handleDeleteRNC = async () => {
+    if (canDeleteDirectly) {
+      if (!confirm('Tem certeza que deseja excluir esta ocorrência permanentemente?')) return;
+      try {
+        await supabase.from('rnc_occurrences').delete().eq('id', rnc.id);
+        toast.success('Ocorrência excluída com sucesso.');
+        setSelectedRNCId(null);
+        queryClient.invalidateQueries({ queryKey: ['rnc-list'] });
+      } catch (error: any) { toast.error(error.message); }
+    } else {
+      const reason = window.prompt('A exclusão desta ocorrência (após etapa 2) requer aprovação. Por favor, digite o motivo da exclusão para notificar o setor de Processos:');
+      if (!reason) return;
+      try {
+        const processosUsers = profiles.filter((p: any) => {
+          const s = sectors.find((sec: any) => sec.id === p.sector_id);
+          return s?.name?.toLowerCase().includes('processos');
+        });
+        const notifications = processosUsers.map((u: any) => ({
+          user_id: u.user_id,
+          title: 'Solicitação de Exclusão de Ocorrência',
+          message: `O usuário ${userProfile?.full_name || 'Desconhecido'} solicitou a exclusão da ocorrência ${rnc.code}. Motivo: ${reason}`,
+          type: 'rnc', reference_type: 'rnc', reference_id: rnc.id,
+        }));
+        if (notifications.length > 0) {
+          await supabase.from('notifications').insert(notifications);
+        }
+        toast.success('Solicitação de exclusão enviada ao setor de Processos.');
+      } catch (error: any) { toast.error(error.message); }
+    }
+  };
+
   return (
     <div className="p-6 animate-fade-in max-w-5xl mx-auto">
       <Button variant="ghost" size="sm" onClick={() => setSelectedRNCId(null)} className="mb-4 gap-1">
@@ -157,11 +193,16 @@ export default function RNCDetail() {
             <p className="text-foreground">{rnc.subject}</p>
             {rnc.description && <p className="text-sm text-muted-foreground mt-1">{rnc.description}</p>}
           </div>
-          {effectiveType === 'oportunidade' && (rnc.status === 'concluida' || rnc.status === 'plano_acao') && (
-            <Button variant="outline" size="sm" onClick={handleCreateRealFromOportunidade}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Criar NC Real
+          <div className="flex items-center gap-2">
+            {effectiveType === 'oportunidade' && (rnc.status === 'concluida' || rnc.status === 'plano_acao') && (
+              <Button variant="outline" size="sm" onClick={handleCreateRealFromOportunidade}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Criar NC Real
+              </Button>
+            )}
+            <Button variant="destructive" size="sm" onClick={handleDeleteRNC}>
+              {canDeleteDirectly ? 'Excluir' : 'Solicitar Exclusão'}
             </Button>
-          )}
+          </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div><span className="text-muted-foreground">Empresa:</span> <span className="font-medium">{(rnc.companies as any)?.name}</span></div>
@@ -268,6 +309,8 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
   const userSector = sectors.find((s: any) => s.id === userProfile?.sector_id);
   const isProcessos = userSector?.name?.toLowerCase().includes('processos');
   const canValidate = isAdmin || isProcessos;
+  const canExecuteStage = isAdmin || isProcessos || user?.id === stage.responsible_user_id;
+  const canUserExecuteImplementation = canExecuteStage || actions.some((a: any) => a.responsible_user_id === user?.id);
 
   return (
     <div>
@@ -294,14 +337,22 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
         // Oportunidade: stage 1 = Plano de Ação, stage 2 = Implementação
         <>
           {stage.stage_number === 1 && isActive && (
-            <ActionPlanFormOportunidade rncId={rnc.id} stageId={stage.id} existing={actions}
-              user={user} queryClient={queryClient} profiles={profiles} />
+            canExecuteStage ? (
+              <ActionPlanFormOportunidade rncId={rnc.id} stageId={stage.id} existing={actions}
+                user={user} queryClient={queryClient} profiles={profiles} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando elaboração do Plano de Ação pelo responsável.</p>
+            )
           )}
           {stage.stage_number === 1 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={null} />
           )}
           {stage.stage_number === 2 && isActive && (
-            <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} isOportunidade={true} />
+            canUserExecuteImplementation ? (
+              <ImplementationForm actions={actions} user={user} isAdmin={isAdmin} isProcessos={isProcessos} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} isOportunidade={true} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando implementação das ações pelos responsáveis.</p>
+            )
           )}
           {stage.stage_number === 2 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation causeAnalysis={null} />
@@ -311,14 +362,22 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
         // Real: 5 stages
         <>
           {stage.stage_number === 1 && isActive && (
-            <CauseAnalysisForm rncId={rnc.id} stageId={stage.id} existing={causeAnalysis} user={user} queryClient={queryClient} />
+            canExecuteStage ? (
+              <CauseAnalysisForm rncId={rnc.id} stageId={stage.id} existing={causeAnalysis} user={user} queryClient={queryClient} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando Análise de Causa pelo responsável.</p>
+            )
           )}
           {stage.stage_number === 1 && !isActive && causeAnalysis && (
             <CauseAnalysisReadonly causeAnalysis={causeAnalysis} />
           )}
 
           {stage.stage_number === 2 && isActive && (
-            <ActionPlanForm rncId={rnc.id} stageId={stage.id} existing={actions} user={user} queryClient={queryClient} profiles={profiles} causeAnalysis={causeAnalysis} />
+            canExecuteStage ? (
+              <ActionPlanForm rncId={rnc.id} stageId={stage.id} existing={actions} user={user} queryClient={queryClient} profiles={profiles} causeAnalysis={causeAnalysis} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando elaboração do Plano de Ação pelo responsável.</p>
+            )
           )}
           {stage.stage_number === 2 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />
@@ -336,7 +395,11 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           )}
 
           {stage.stage_number === 4 && isActive && (
-            <ImplementationForm actions={actions} user={user} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} isOportunidade={false} />
+            canUserExecuteImplementation ? (
+              <ImplementationForm actions={actions} user={user} isAdmin={isAdmin} isProcessos={isProcessos} queryClient={queryClient} rncId={rnc.id} stageId={stage.id} sectors={sectors} isOportunidade={false} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando implementação das ações pelos responsáveis.</p>
+            )
           )}
           {stage.stage_number === 4 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation causeAnalysis={causeAnalysis} />
@@ -1029,7 +1092,7 @@ function ValidationForm({ stageId, rncId, rnc, queryClient, sectors }: any) {
 }
 
 /* ======================== IMPLEMENTATION ======================== */
-function ImplementationForm({ actions, user, queryClient, rncId, stageId, sectors, isOportunidade }: any) {
+function ImplementationForm({ actions, user, isAdmin, isProcessos, queryClient, rncId, stageId, sectors, isOportunidade }: any) {
   const [evidence, setEvidence] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, File | null>>({});
   const [validationSector, setValidationSector] = useState('');
@@ -1056,6 +1119,18 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
       }).eq('id', actionId);
       queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
       toast.success('Ação implementada');
+    } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
+  };
+
+  const handleEditImplementation = async (action: any) => {
+    setLoading(true);
+    try {
+      await supabase.from('rnc_actions').update({
+        is_implemented: false
+      }).eq('id', action.id);
+      
+      setEvidence(prev => ({ ...prev, [action.id]: action.evidence || '' }));
+      queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
@@ -1101,13 +1176,22 @@ function ImplementationForm({ actions, user, queryClient, rncId, stageId, sector
                 <Label className="text-xs">Anexo</Label>
                 <Input type="file" onChange={(e) => setFiles({ ...files, [action.id]: e.target.files?.[0] || null })} className="h-9" />
               </div>
-              <Button size="sm" onClick={() => handleImplement(action.id)} disabled={loading}>Salvar Implementação</Button>
+              {isAdmin || isProcessos || action.responsible_user_id === user?.id ? (
+                <Button size="sm" onClick={() => handleImplement(action.id)} disabled={loading}>Salvar Implementação</Button>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Somente o responsável ou Time de Processos pode implementar.</p>
+              )}
             </>
           ) : (
             <div className="text-xs text-muted-foreground">
               {action.evidence && <p>Evidência: {action.evidence}</p>}
               {action.evidence_file_path && <p className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> Anexo enviado</p>}
               {action.implemented_at && <p>Implementada em: {new Date(action.implemented_at).toLocaleDateString('pt-BR')}</p>}
+              {(isAdmin || isProcessos || action.responsible_user_id === user?.id) && (
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => handleEditImplementation(action)} disabled={loading}>
+                  Editar Implementação
+                </Button>
+              )}
             </div>
           )}
         </div>
