@@ -82,7 +82,7 @@ export default function RNCForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!type || !subject || !date || !companyId || !companyType || !sectorId || !origin || !approverId || !criticality) {
+    if (!type || !subject || !description || !date || !companyId || !companyType || !sectorId || !origin || !approverId || !criticality) {
       toast.error('Preencha todos os campos obrigatórios.');
       return;
     }
@@ -189,7 +189,7 @@ export default function RNCForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="description">Descrição *</Label>
             <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva a ocorrência..." rows={3} />
           </div>
 

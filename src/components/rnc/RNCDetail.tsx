@@ -264,6 +264,11 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
   // For "oportunidade", stage 1 is Plano de Ação (maps to ActionPlan)
   const isOportunidade = effectiveType === 'oportunidade';
 
+  const userProfile = profiles.find((p: any) => p.user_id === user?.id);
+  const userSector = sectors.find((s: any) => s.id === userProfile?.sector_id);
+  const isProcessos = userSector?.name?.toLowerCase().includes('processos');
+  const canValidate = isAdmin || isProcessos;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -320,7 +325,11 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           )}
 
           {stage.stage_number === 3 && isActive && (
-            <ValidationForm stageId={stage.id} rncId={rnc.id} rnc={rnc} queryClient={queryClient} sectors={sectors} />
+            canValidate ? (
+              <ValidationForm stageId={stage.id} rncId={rnc.id} rnc={rnc} queryClient={queryClient} sectors={sectors} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando validação do setor de Processos.</p>
+            )
           )}
           {stage.stage_number === 3 && !isActive && (stage.status === 'aprovado' || stage.status === 'concluido') && (
             <p className="text-sm text-muted-foreground py-2">✅ Validação aprovada pelo setor especializado.</p>
@@ -334,7 +343,11 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           )}
 
           {stage.stage_number === 5 && isActive && (
-            <EfficacyForm rncId={rnc.id} stageId={stage.id} existing={efficacy} user={user} queryClient={queryClient} />
+            canValidate ? (
+              <EfficacyForm rncId={rnc.id} stageId={stage.id} existing={efficacy} user={user} queryClient={queryClient} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando análise de eficácia do setor de Processos.</p>
+            )
           )}
           {stage.stage_number === 5 && !isActive && efficacy && (
             <div className="text-sm mt-2">
@@ -357,7 +370,7 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   const [notify, setNotify] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const [stage1Sector, setStage1Sector] = useState('');
+  const [stage1Sector, setStage1Sector] = useState(rnc?.sector_id || '');
   const [stage1User, setStage1User] = useState('');
   const [stage1Deadline, setStage1Deadline] = useState('');
   const [stage3Sector, setStage3Sector] = useState('');
@@ -375,6 +388,18 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
         toast.success('RNC recusada');
       } else {
         const isOportunidade = reclassifiedType === 'oportunidade';
+
+        if (isOportunidade && (!stage1Sector || !stage1User || !stage1Deadline)) {
+          toast.error('Preencha todos os campos obrigatórios da Etapa 1 e 2.');
+          setLoading(false);
+          return;
+        }
+
+        if (!isOportunidade && (!stage1Sector || !stage1User || !stage1Deadline || !stage3Sector || !stage5Sector)) {
+          toast.error('Preencha todos os setores e responsáveis obrigatórios para as etapas.');
+          setLoading(false);
+          return;
+        }
 
         await supabase.from('rnc_occurrences').update({
           status: isOportunidade ? 'plano_acao' : 'analise_causa',
