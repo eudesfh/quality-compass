@@ -16,6 +16,7 @@ export default function UsersTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [sectorId, setSectorId] = useState('');
@@ -44,7 +45,7 @@ export default function UsersTab() {
   });
 
   const resetForm = () => {
-    setEmail(''); setFullName(''); setCompanyId(''); setSectorId(''); setProfileId('');
+    setEmail(''); setPassword(''); setFullName(''); setCompanyId(''); setSectorId(''); setProfileId('');
     setIsAdminRole(false); setIsActive(true); setEditingUser(null); setShowForm(false);
   };
 
@@ -61,11 +62,11 @@ export default function UsersTab() {
   };
 
   const handleCreate = async () => {
-    if (!email || !fullName) { toast.error('Preencha nome e e-mail'); return; }
+    if (!email || !fullName || !password) { toast.error('Preencha nome, e-mail e senha'); return; }
     setLoading(true);
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email, password: Math.random().toString(36).slice(-12) + 'A1!',
+        email, password,
         options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
       });
       if (authError) throw authError;
@@ -134,6 +135,9 @@ export default function UsersTab() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Nome Completo *</Label><Input value={fullName} onChange={e => setFullName(e.target.value)} /></div>
               <div className="space-y-2"><Label>E-mail *</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={!!editingUser} /></div>
+              {!editingUser && (
+                <div className="space-y-2"><Label>Senha Inicial *</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
+              )}
               <div className="space-y-2"><Label>Empresa</Label>
                 <Select value={companyId} onValueChange={setCompanyId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
