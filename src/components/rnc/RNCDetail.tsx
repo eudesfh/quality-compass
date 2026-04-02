@@ -1318,9 +1318,9 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         <Label>Anexo</Label>
         <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="h-9" />
         {existing?.evidence_file_path && (
-          <a href={getFileUrl(existing.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 w-fit mt-1">
+          <SignedFileLink path={existing.evidence_file_path} className="text-xs text-primary hover:underline flex items-center gap-1 w-fit mt-1">
             <Paperclip className="h-3 w-3" /> Baixar anexo existente
-          </a>
+          </SignedFileLink>
         )}
       </div>
       <Button onClick={handleSave} disabled={loading}>{loading ? 'Salvando...' : 'Salvar Avaliação'}</Button>
