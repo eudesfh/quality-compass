@@ -1230,9 +1230,9 @@ function ImplementationForm({ actions, user, isAdmin, isProcessos, queryClient, 
             <div className="text-xs text-muted-foreground">
               {action.evidence && <p>Evidência: {action.evidence}</p>}
               {action.evidence_file_path && (
-                <a href={getFileUrl(action.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline mt-1">
+                <SignedFileLink path={action.evidence_file_path} className="flex items-center gap-1 text-primary hover:underline mt-1 text-xs">
                   <Paperclip className="h-3 w-3" /> Baixar anexo enviado
-                </a>
+                </SignedFileLink>
               )}
               {action.implemented_at && <p className="mt-1">Implementada em: {new Date(action.implemented_at).toLocaleDateString('pt-BR')}</p>}
               {(isAdmin || isProcessos || action.responsible_user_id === user?.id) && (
