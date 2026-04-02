@@ -37,11 +37,20 @@ function getStageNames(occType: OccurrenceType): string[] {
   return occType === 'oportunidade' ? OPORTUNIDADE_STAGES : REAL_STAGES;
 }
 
-const getFileUrl = async (path: string) => {
+const openFileUrl = async (path: string) => {
   const { data, error } = await supabase.storage.from('rnc-attachments').createSignedUrl(path, 3600);
-  if (error || !data?.signedUrl) return '';
-  return data.signedUrl;
+  if (error || !data?.signedUrl) {
+    toast.error('Erro ao abrir o arquivo');
+    return;
+  }
+  window.open(data.signedUrl, '_blank');
 };
+
+const SignedFileLink = ({ path, children, className }: { path: string; children: React.ReactNode; className?: string }) => (
+  <button type="button" onClick={() => openFileUrl(path)} className={className}>
+    {children}
+  </button>
+);
 
 export default function RNCDetail() {
   const { selectedRNCId, setSelectedRNCId, setActiveModule, setShowRNCForm, setRncPreFill } = useModule();
