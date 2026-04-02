@@ -1035,9 +1035,9 @@ function ActionPlanReadonly({ actions, profiles, showImplementation, causeAnalys
               <p className="text-xs text-muted-foreground mt-1">Evidência: {a.evidence}</p>
             )}
             {showImplementation && a.evidence_file_path && (
-              <a href={getFileUrl(a.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-1 flex items-center gap-1">
+              <SignedFileLink path={a.evidence_file_path} className="text-xs text-primary hover:underline mt-1 flex items-center gap-1">
                 <Paperclip className="h-3 w-3" /> Ver anexo da implementação
-              </a>
+              </SignedFileLink>
             )}
           </div>
         ))}
