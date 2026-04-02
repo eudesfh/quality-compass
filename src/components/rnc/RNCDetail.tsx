@@ -37,8 +37,10 @@ function getStageNames(occType: OccurrenceType): string[] {
   return occType === 'oportunidade' ? OPORTUNIDADE_STAGES : REAL_STAGES;
 }
 
-const getFileUrl = (path: string) => {
-  return supabase.storage.from('rnc-attachments').getPublicUrl(path).data.publicUrl;
+const getFileUrl = async (path: string) => {
+  const { data, error } = await supabase.storage.from('rnc-attachments').createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return '';
+  return data.signedUrl;
 };
 
 export default function RNCDetail() {
