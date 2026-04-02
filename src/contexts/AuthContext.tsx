@@ -53,7 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loadUserData(currentUser);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Redirect to reset password page instead of auto-logging in
+        window.location.href = '/reset-password';
+        return;
+      }
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       loadUserData(currentUser);
