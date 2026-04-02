@@ -37,9 +37,20 @@ function getStageNames(occType: OccurrenceType): string[] {
   return occType === 'oportunidade' ? OPORTUNIDADE_STAGES : REAL_STAGES;
 }
 
-const getFileUrl = (path: string) => {
-  return supabase.storage.from('rnc-attachments').getPublicUrl(path).data.publicUrl;
+const openFileUrl = async (path: string) => {
+  const { data, error } = await supabase.storage.from('rnc-attachments').createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) {
+    toast.error('Erro ao abrir o arquivo');
+    return;
+  }
+  window.open(data.signedUrl, '_blank');
 };
+
+const SignedFileLink = ({ path, children, className }: { path: string; children: React.ReactNode; className?: string }) => (
+  <button type="button" onClick={() => openFileUrl(path)} className={className}>
+    {children}
+  </button>
+);
 
 export default function RNCDetail() {
   const { selectedRNCId, setSelectedRNCId, setActiveModule, setShowRNCForm, setRncPreFill } = useModule();
@@ -231,12 +242,12 @@ export default function RNCDetail() {
             <p className="text-sm font-medium mb-2">Anexos da Ocorrência:</p>
             <div className="flex flex-wrap gap-2">
               {initialAttachments.map((att: any) => (
-                <a key={att.id} href={getFileUrl(att.file_path)} target="_blank" rel="noopener noreferrer">
+                <SignedFileLink key={att.id} path={att.file_path} className="inline-block">
                   <Badge variant="outline" className="flex items-center gap-1 hover:bg-muted cursor-pointer">
                     <Paperclip className="h-3 w-3" />
                     {att.file_name}
                   </Badge>
-                </a>
+                </SignedFileLink>
               ))}
             </div>
           </div>
@@ -1024,9 +1035,9 @@ function ActionPlanReadonly({ actions, profiles, showImplementation, causeAnalys
               <p className="text-xs text-muted-foreground mt-1">Evidência: {a.evidence}</p>
             )}
             {showImplementation && a.evidence_file_path && (
-              <a href={getFileUrl(a.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-1 flex items-center gap-1">
+              <SignedFileLink path={a.evidence_file_path} className="text-xs text-primary hover:underline mt-1 flex items-center gap-1">
                 <Paperclip className="h-3 w-3" /> Ver anexo da implementação
-              </a>
+              </SignedFileLink>
             )}
           </div>
         ))}
@@ -1219,9 +1230,9 @@ function ImplementationForm({ actions, user, isAdmin, isProcessos, queryClient, 
             <div className="text-xs text-muted-foreground">
               {action.evidence && <p>Evidência: {action.evidence}</p>}
               {action.evidence_file_path && (
-                <a href={getFileUrl(action.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline mt-1">
+                <SignedFileLink path={action.evidence_file_path} className="flex items-center gap-1 text-primary hover:underline mt-1 text-xs">
                   <Paperclip className="h-3 w-3" /> Baixar anexo enviado
-                </a>
+                </SignedFileLink>
               )}
               {action.implemented_at && <p className="mt-1">Implementada em: {new Date(action.implemented_at).toLocaleDateString('pt-BR')}</p>}
               {(isAdmin || isProcessos || action.responsible_user_id === user?.id) && (
@@ -1307,9 +1318,9 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         <Label>Anexo</Label>
         <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="h-9" />
         {existing?.evidence_file_path && (
-          <a href={getFileUrl(existing.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 w-fit mt-1">
+          <SignedFileLink path={existing.evidence_file_path} className="text-xs text-primary hover:underline flex items-center gap-1 w-fit mt-1">
             <Paperclip className="h-3 w-3" /> Baixar anexo existente
-          </a>
+          </SignedFileLink>
         )}
       </div>
       <Button onClick={handleSave} disabled={loading}>{loading ? 'Salvando...' : 'Salvar Avaliação'}</Button>
