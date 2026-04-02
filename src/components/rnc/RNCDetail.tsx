@@ -37,6 +37,10 @@ function getStageNames(occType: OccurrenceType): string[] {
   return occType === 'oportunidade' ? OPORTUNIDADE_STAGES : REAL_STAGES;
 }
 
+const getFileUrl = (path: string) => {
+  return supabase.storage.from('rnc-attachments').getPublicUrl(path).data.publicUrl;
+};
+
 export default function RNCDetail() {
   const { selectedRNCId, setSelectedRNCId, setActiveModule, setShowRNCForm, setRncPreFill } = useModule();
   const { user, isAdmin } = useAuth();
@@ -77,6 +81,15 @@ export default function RNCDetail() {
     queryFn: async () => {
       const { data } = await supabase.from('rnc_cause_analysis').select('*').eq('rnc_id', selectedRNCId!).maybeSingle();
       return data;
+    },
+    enabled: !!selectedRNCId,
+  });
+
+  const { data: initialAttachments = [] } = useQuery({
+    queryKey: ['rnc-attachments', selectedRNCId],
+    queryFn: async () => {
+      const { data } = await supabase.from('rnc_attachments').select('*').eq('rnc_id', selectedRNCId!);
+      return data || [];
     },
     enabled: !!selectedRNCId,
   });
@@ -213,6 +226,21 @@ export default function RNCDetail() {
           <div><span className="text-muted-foreground">Aprovador:</span> <span className="font-medium">{getProfileName(rnc.approver_id)}</span></div>
           <div><span className="text-muted-foreground">Criticidade:</span> <span className="font-medium capitalize">{rnc.criticality}</span></div>
         </div>
+        {initialAttachments.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-sm font-medium mb-2">Anexos da Ocorrência:</p>
+            <div className="flex flex-wrap gap-2">
+              {initialAttachments.map((att: any) => (
+                <a key={att.id} href={getFileUrl(att.file_path)} target="_blank" rel="noopener noreferrer">
+                  <Badge variant="outline" className="flex items-center gap-1 hover:bg-muted cursor-pointer">
+                    <Paperclip className="h-3 w-3" />
+                    {att.file_name}
+                  </Badge>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Triage */}
@@ -995,6 +1023,11 @@ function ActionPlanReadonly({ actions, profiles, showImplementation, causeAnalys
             {showImplementation && a.evidence && (
               <p className="text-xs text-muted-foreground mt-1">Evidência: {a.evidence}</p>
             )}
+            {showImplementation && a.evidence_file_path && (
+              <a href={getFileUrl(a.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-1 flex items-center gap-1">
+                <Paperclip className="h-3 w-3" /> Ver anexo da implementação
+              </a>
+            )}
           </div>
         ))}
       </div>
@@ -1185,8 +1218,12 @@ function ImplementationForm({ actions, user, isAdmin, isProcessos, queryClient, 
           ) : (
             <div className="text-xs text-muted-foreground">
               {action.evidence && <p>Evidência: {action.evidence}</p>}
-              {action.evidence_file_path && <p className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> Anexo enviado</p>}
-              {action.implemented_at && <p>Implementada em: {new Date(action.implemented_at).toLocaleDateString('pt-BR')}</p>}
+              {action.evidence_file_path && (
+                <a href={getFileUrl(action.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline mt-1">
+                  <Paperclip className="h-3 w-3" /> Baixar anexo enviado
+                </a>
+              )}
+              {action.implemented_at && <p className="mt-1">Implementada em: {new Date(action.implemented_at).toLocaleDateString('pt-BR')}</p>}
               {(isAdmin || isProcessos || action.responsible_user_id === user?.id) && (
                 <Button variant="outline" size="sm" className="mt-2" onClick={() => handleEditImplementation(action)} disabled={loading}>
                   Editar Implementação
@@ -1269,7 +1306,11 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
       <div className="space-y-1">
         <Label>Anexo</Label>
         <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="h-9" />
-        {existing?.evidence_file_path && <p className="text-xs text-muted-foreground flex items-center gap-1"><Paperclip className="h-3 w-3" /> Anexo existente</p>}
+        {existing?.evidence_file_path && (
+          <a href={getFileUrl(existing.evidence_file_path)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 w-fit mt-1">
+            <Paperclip className="h-3 w-3" /> Baixar anexo existente
+          </a>
+        )}
       </div>
       <Button onClick={handleSave} disabled={loading}>{loading ? 'Salvando...' : 'Salvar Avaliação'}</Button>
     </div>
