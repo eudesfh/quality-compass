@@ -242,12 +242,12 @@ export default function RNCDetail() {
             <p className="text-sm font-medium mb-2">Anexos da Ocorrência:</p>
             <div className="flex flex-wrap gap-2">
               {initialAttachments.map((att: any) => (
-                <a key={att.id} href={getFileUrl(att.file_path)} target="_blank" rel="noopener noreferrer">
+                <SignedFileLink key={att.id} path={att.file_path} className="inline-block">
                   <Badge variant="outline" className="flex items-center gap-1 hover:bg-muted cursor-pointer">
                     <Paperclip className="h-3 w-3" />
                     {att.file_name}
                   </Badge>
-                </a>
+                </SignedFileLink>
               ))}
             </div>
           </div>
