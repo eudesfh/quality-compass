@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -88,6 +88,26 @@ export default function RiskDetail() {
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
+  const handleDelete = async () => {
+    if (!risk) return;
+    if (!window.confirm('Tem certeza que deseja excluir este risco? Esta ação não pode ser desfeita.')) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('risks').delete().eq('id', risk.id);
+      if (error) throw error;
+      
+      toast.success('Risco excluído com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['risk-list'] });
+      queryClient.invalidateQueries({ queryKey: ['risk-detail'] });
+      setSelectedRiskId(null);
+    } catch (error: any) {
+      toast.error('Erro ao excluir risco: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateOportunidade = () => {
     if (!risk) return;
     setRncPreFill({
@@ -125,9 +145,14 @@ export default function RiskDetail() {
           </div>
           <div className="flex gap-2">
             {(risk.created_by === user?.id || isAdmin) && !editing && (
-              <Button variant="outline" size="sm" onClick={startEditing} className="gap-1">
-                <Edit2 className="h-3.5 w-3.5" /> Editar
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={startEditing} className="gap-1">
+                  <Edit2 className="h-3.5 w-3.5" /> Editar
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={loading} className="gap-1">
+                  <Trash2 className="h-3.5 w-3.5" /> Excluir
+                </Button>
+              </>
             )}
             <Button variant="outline" size="sm" onClick={handleCreateOportunidade} className="gap-1">
               Criar Oportunidade de Melhoria
