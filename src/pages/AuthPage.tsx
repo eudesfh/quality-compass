@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAuthRedirectUrl } from '@/lib/authRedirect';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ export default function AuthPage() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: getAuthRedirectUrl('/reset-password'),
       });
       if (error) throw error;
       toast.success('E-mail de redefinição de senha enviado!');

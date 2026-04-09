@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import type { Tables } from '@/integrations/supabase/types';
+import { getResetPasswordRouteWithTokens, isPasswordRecoveryFlow } from '@/lib/authRedirect';
 
 interface AuthContextType {
   user: User | null;
@@ -48,6 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Get initial session first
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isPasswordRecoveryFlow()) {
+        window.location.replace(getResetPasswordRouteWithTokens());
+        return;
+      }
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       loadUserData(currentUser);
@@ -56,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         // Redirect to reset password page instead of auto-logging in
-        window.location.href = '/reset-password';
+        window.location.replace(getResetPasswordRouteWithTokens());
         return;
       }
       const currentUser = session?.user ?? null;
