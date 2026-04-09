@@ -6,12 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     // Check for recovery token in URL hash
@@ -28,8 +27,8 @@ export default function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      setSuccess(true);
       toast.success('Senha atualizada com sucesso!');
-      navigate('/');
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -45,15 +44,22 @@ export default function ResetPasswordPage() {
           <CardTitle className="text-xl">Redefinir Senha</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Nova Senha</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+          {success ? (
+            <div className="space-y-3 text-center">
+              <p className="text-sm text-foreground">Senha alterada com sucesso.</p>
+              <p className="text-sm text-muted-foreground">Você já pode fechar esta página.</p>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Salvando...' : 'Salvar Nova Senha'}
-            </Button>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Nova Senha</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Salvando...' : 'Salvar Nova Senha'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

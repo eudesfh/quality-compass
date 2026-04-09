@@ -10,7 +10,10 @@ export function isPasswordRecoveryFlow() {
 
   return (
     searchParams.get("type") === "recovery" ||
-    hashParams.get("type") === "recovery"
+    hashParams.get("type") === "recovery" ||
+    searchParams.has("code") ||
+    hashParams.has("access_token") ||
+    hashParams.has("refresh_token")
   );
 }
 
