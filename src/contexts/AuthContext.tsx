@@ -47,27 +47,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (isPasswordRecoveryFlow() && window.location.pathname !== '/reset-password') {
+      window.location.replace(getResetPasswordRouteWithTokens());
+      return;
+    }
+
+    setLoading(true);
+
+    const handleSession = (sessionUser: User | null) => {
+      setUser(sessionUser);
+      loadUserData(sessionUser);
+    };
+
+    // Register auth listener before reading session to avoid missing recovery events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        window.location.replace(getResetPasswordRouteWithTokens());
+        return;
+      }
+
+      if (isPasswordRecoveryFlow()) {
+        return;
+      }
+
+      handleSession(session?.user ?? null);
+    });
+
     // Get initial session first
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isPasswordRecoveryFlow()) {
-        window.location.replace(getResetPasswordRouteWithTokens());
+        setUser(session?.user ?? null);
+        setLoading(false);
         return;
       }
 
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      loadUserData(currentUser);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        // Redirect to reset password page instead of auto-logging in
-        window.location.replace(getResetPasswordRouteWithTokens());
-        return;
-      }
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      loadUserData(currentUser);
+      handleSession(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
