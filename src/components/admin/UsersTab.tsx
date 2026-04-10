@@ -97,6 +97,15 @@ export default function UsersTab() {
         sector_id: sectorId || null, permission_profile_id: profileId || null, is_active: isActive,
       }).eq('user_id', editingUser.user_id);
       if (error) throw error;
+
+      if (password) {
+        const { error: pwError } = await supabase.rpc('admin_update_user_password', {
+          target_user_id: editingUser.user_id,
+          new_password: password
+        });
+        if (pwError) throw pwError;
+      }
+
       const wasAdmin = adminRoles.some((r: any) => r.user_id === editingUser.user_id);
       if (isAdminRole && !wasAdmin) {
         await supabase.from('user_roles').insert({ user_id: editingUser.user_id, role: 'admin' });
@@ -135,9 +144,10 @@ export default function UsersTab() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Nome Completo *</Label><Input value={fullName} onChange={e => setFullName(e.target.value)} /></div>
               <div className="space-y-2"><Label>E-mail *</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={!!editingUser} /></div>
-              {!editingUser && (
-                <div className="space-y-2"><Label>Senha Inicial *</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
-              )}
+              <div className="space-y-2">
+                <Label>{editingUser ? 'Nova Senha (deixe em branco para manter)' : 'Senha Inicial *'}</Label>
+                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+              </div>
               <div className="space-y-2"><Label>Empresa</Label>
                 <Select value={companyId} onValueChange={setCompanyId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
