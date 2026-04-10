@@ -1,4 +1,4 @@
-import { Bell, User, Shield, Settings, LogOut } from 'lucide-react';
+import { Bell, User, Shield, Settings, LogOut, KeyRound } from 'lucide-react';
 import { useModule, Module } from '@/contexts/ModuleContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useState } from 'react';
+import ChangePasswordDialog from '@/components/auth/ChangePasswordDialog';
 
 const modules: { key: Module; label: string }[] = [
   { key: 'rnc', label: 'RNC' },
@@ -16,9 +17,10 @@ const modules: { key: Module; label: string }[] = [
 
 export default function TopNav() {
   const { activeModule, setActiveModule, setActiveView, setShowAdminPanel, setSelectedRNCId, setSelectedRiskId } = useModule();
-  const { profile, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
@@ -158,6 +160,10 @@ export default function TopNav() {
                 <p className="text-xs text-muted-foreground">{profile?.email}</p>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); setChangePasswordOpen(true); }}>
+                <KeyRound className="h-4 w-4 mr-2" />
+                Alterar senha
+              </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem onClick={() => { setShowAdminPanel(true); setSelectedRNCId(null); setSelectedRiskId(null); }}>
                   <Settings className="h-4 w-4 mr-2" />
@@ -170,6 +176,11 @@ export default function TopNav() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <ChangePasswordDialog
+            open={changePasswordOpen}
+            onOpenChange={setChangePasswordOpen}
+            userEmail={profile?.email || user?.email}
+          />
         </div>
       </div>
     </header>
