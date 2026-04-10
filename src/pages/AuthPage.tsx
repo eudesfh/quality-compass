@@ -6,13 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { getAuthRedirectUrl } from '@/lib/authRedirect';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,52 +25,6 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) { toast.error('Informe seu e-mail'); return; }
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getAuthRedirectUrl('/reset-password'),
-      });
-      if (error) throw error;
-      toast.success('E-mail de redefinição de senha enviado!');
-      setShowForgot(false);
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (showForgot) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Shield className="h-10 w-10 mx-auto text-primary mb-2" />
-            <CardTitle className="text-xl">Recuperar Senha</CardTitle>
-            <CardDescription>Informe seu e-mail para redefinir a senha</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Enviando...' : 'Enviar link de recuperação'}
-              </Button>
-              <Button type="button" variant="ghost" className="w-full" onClick={() => setShowForgot(false)}>
-                Voltar ao login
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -92,12 +44,12 @@ export default function AuthPage() {
               <Label htmlFor="password">Senha</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
-            <button type="button" className="text-sm text-primary hover:underline" onClick={() => setShowForgot(true)}>
-              Esqueceu a senha?
-            </button>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Processando...' : 'Entrar'}
             </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Para alterar sua senha, entre no sistema e use a opção <span className="font-medium text-foreground">Alterar senha</span> no menu da conta.
+            </p>
             <p className="text-center text-sm text-muted-foreground">
               Não tem acesso? Solicite já seu usuário ao administrador.
             </p>
