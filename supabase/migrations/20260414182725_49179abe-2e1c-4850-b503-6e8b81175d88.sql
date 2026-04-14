@@ -1,0 +1,20 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
+CREATE OR REPLACE FUNCTION public.admin_update_user_password(target_user_id UUID, new_password TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role = 'admin'
+  ) THEN
+    RAISE EXCEPTION 'Acesso negado: apenas administradores podem alterar senhas.';
+  END IF;
+
+  UPDATE auth.users
+  SET encrypted_password = extensions.crypt(new_password, extensions.gen_salt('bf'))
+  WHERE id = target_user_id;
+END;
+$$;
