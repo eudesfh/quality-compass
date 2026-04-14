@@ -725,6 +725,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_update_user_password: {
+        Args: { new_password: string; target_user_id: string }
+        Returns: undefined
+      }
       has_rnc_access: {
         Args: { _rnc_id: string; _user_id: string }
         Returns: boolean
