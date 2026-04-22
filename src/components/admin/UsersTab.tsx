@@ -44,6 +44,45 @@ export default function UsersTab() {
     },
   });
 
+  const { data: confirmedMap = {} } = useQuery({
+    queryKey: ['users-email-confirmed', users.map((u: any) => u.user_id).join(',')],
+    enabled: users.length > 0,
+    queryFn: async () => {
+      const entries = await Promise.all(
+        users.map(async (u: any) => {
+          const { data } = await supabase.rpc('admin_get_user_email_confirmed', { target_user_id: u.user_id });
+          return [u.user_id, !!data] as const;
+        })
+      );
+      return Object.fromEntries(entries) as Record<string, boolean>;
+    },
+  });
+
+  const handleResendConfirmation = async (userEmail: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: userEmail,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) throw error;
+      toast.success('E-mail de confirmação reenviado!');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao reenviar confirmação');
+    }
+  };
+
+  const handleManualConfirm = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('admin_confirm_user_email', { target_user_id: userId });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['users-email-confirmed'] });
+      toast.success('E-mail confirmado manualmente!');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao confirmar e-mail');
+    }
+  };
+
   const resetForm = () => {
     setEmail(''); setPassword(''); setFullName(''); setCompanyId(''); setSectorId(''); setProfileId('');
     setIsAdminRole(false); setIsActive(true); setEditingUser(null); setShowForm(false);
