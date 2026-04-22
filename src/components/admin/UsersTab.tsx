@@ -230,10 +230,13 @@ export default function UsersTab() {
             <th className="text-left px-4 py-3 font-medium text-muted-foreground">Setor</th>
             <th className="text-left px-4 py-3 font-medium text-muted-foreground">Perfil</th>
             <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+            <th className="text-left px-4 py-3 font-medium text-muted-foreground">E-mail</th>
             <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
           </tr></thead>
           <tbody>
-            {users.map(u => (
+            {users.map(u => {
+              const isConfirmed = confirmedMap[u.user_id];
+              return (
               <tr key={u.id} className="border-b last:border-0 hover:bg-muted/30">
                 <td className="px-4 py-3 font-medium">{u.full_name}</td>
                 <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
@@ -241,14 +244,26 @@ export default function UsersTab() {
                 <td className="px-4 py-3 text-muted-foreground">{(u.sectors as any)?.name || '—'}</td>
                 <td className="px-4 py-3 text-muted-foreground">{(u.permission_profiles as any)?.name || '—'}</td>
                 <td className="px-4 py-3"><Badge variant={u.is_active ? 'secondary' : 'outline'} className="text-xs">{u.is_active ? 'Ativo' : 'Inativo'}</Badge></td>
+                <td className="px-4 py-3">
+                  <Badge variant={isConfirmed ? 'secondary' : 'outline'} className="text-xs">
+                    {isConfirmed ? 'Confirmado' : 'Pendente'}
+                  </Badge>
+                </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-1">
+                    {!isConfirmed && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleResendConfirmation(u.email)} title="Reenviar e-mail de confirmação"><Send className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleManualConfirm(u.user_id)} title="Confirmar e-mail manualmente"><MailCheck className="h-3.5 w-3.5" /></Button>
+                      </>
+                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(u)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(u.user_id)} title="Desativar"><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
