@@ -10,6 +10,7 @@ import { useModule } from '@/contexts/ModuleContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { formatDateBR } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -171,8 +172,8 @@ export default function RiskDetail() {
           {(risk as any).companies?.name && <div><span className="text-muted-foreground">Empresa:</span> <span className="font-medium">{(risk as any).companies.name}</span></div>}
           {risk.company_type && <div><span className="text-muted-foreground">Tipo:</span> <span className="font-medium capitalize">{risk.company_type}</span></div>}
           {(risk as any).sectors?.name && <div><span className="text-muted-foreground">Setor:</span> <span className="font-medium">{(risk as any).sectors.name}</span></div>}
-          {risk.deadline && <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">{new Date(risk.deadline).toLocaleDateString('pt-BR')}</span></div>}
-          <div><span className="text-muted-foreground">Criado em:</span> <span className="font-medium">{new Date(risk.created_at).toLocaleDateString('pt-BR')}</span></div>
+          {risk.deadline && <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">{formatDateBR(risk.deadline)}</span></div>}
+          <div><span className="text-muted-foreground">Criado em:</span> <span className="font-medium">{formatDateBR(risk.created_at)}</span></div>
         </div>
 
         {risk.treatment && !editing && (
