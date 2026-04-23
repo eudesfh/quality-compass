@@ -171,10 +171,31 @@ export default function UsersTab() {
     } catch (error: any) { toast.error(error.message); }
   };
 
+  const filteredUsers = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u: any) =>
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      ((u.companies as any)?.name || '').toLowerCase().includes(q) ||
+      ((u.sectors as any)?.name || '').toLowerCase().includes(q) ||
+      ((u.permission_profiles as any)?.name || '').toLowerCase().includes(q)
+    );
+  }, [users, searchTerm]);
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-medium">Usuários Cadastrados</h2>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h2 className="font-medium whitespace-nowrap">Usuários Cadastrados</h2>
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, e-mail, empresa, setor ou perfil..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}><Plus className="h-4 w-4 mr-1" />Novo Usuário</Button>
       </div>
       {showForm && (
