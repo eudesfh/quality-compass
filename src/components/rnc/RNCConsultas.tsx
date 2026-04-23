@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
 import FilterSidebar, { FilterValues } from '@/components/filters/FilterSidebar';
+import { formatDateBR } from '@/lib/utils';
 
 type RNCStatus = Database['public']['Enums']['rnc_status'];
 type CritLevel = Database['public']['Enums']['criticality_level'];
