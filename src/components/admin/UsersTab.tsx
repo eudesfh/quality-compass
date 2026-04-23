@@ -25,6 +25,7 @@ export default function UsersTab() {
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users'],
