@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
+import { formatDateBR } from '@/lib/utils';
 
 type RNCStatus = Database['public']['Enums']['rnc_status'];
 type CritLevel = Database['public']['Enums']['criticality_level'];
@@ -82,7 +83,7 @@ export default function RNCPendingList() {
                       <span>{(rnc.companies as any)?.name} • {(rnc.sectors as any)?.name}</span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {new Date(rnc.occurrence_date).toLocaleDateString('pt-BR')}
+                        {formatDateBR(rnc.occurrence_date)}
                       </span>
                       <span>Aprovador: {getProfileName(rnc.approver_id)}</span>
                     </div>

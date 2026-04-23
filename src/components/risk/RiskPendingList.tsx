@@ -4,6 +4,7 @@ import { useModule } from '@/contexts/ModuleContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
+import { formatDateBR } from '@/lib/utils';
 
 type RiskStatus = Database['public']['Enums']['risk_status'];
 
@@ -75,7 +76,7 @@ export default function RiskPendingList() {
                       {risk.deadline && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          Prazo: {new Date(risk.deadline).toLocaleDateString('pt-BR')}
+                          Prazo: {formatDateBR(risk.deadline)}
                         </span>
                       )}
                     </div>

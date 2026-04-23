@@ -221,8 +221,8 @@ export default function UsersTab() {
           </CardContent>
         </Card>
       )}
-      <div className="bg-card border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card border rounded-lg overflow-x-auto">
+        <table className="w-full text-sm min-w-[1000px]">
           <thead><tr className="border-b bg-muted/50">
             <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nome</th>
             <th className="text-left px-4 py-3 font-medium text-muted-foreground">E-mail</th>

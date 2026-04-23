@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
 import FilterSidebar, { FilterValues } from '@/components/filters/FilterSidebar';
+import { formatDateBR } from '@/lib/utils';
 
 type RiskStatus = Database['public']['Enums']['risk_status'];
 
@@ -100,7 +101,7 @@ export default function RiskConsultas() {
                     <td className="px-4 py-3"><Badge variant="outline" className={cls.className + ' border-0 text-xs'}>{cls.label} ({level})</Badge></td>
                     <td className="px-4 py-3 capitalize text-muted-foreground">{risk.response}</td>
                     <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{statusLabels[risk.status]}</Badge></td>
-                    <td className="px-4 py-3 text-muted-foreground">{risk.deadline ? new Date(risk.deadline).toLocaleDateString('pt-BR') : '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{risk.deadline ? formatDateBR(risk.deadline) : '—'}</td>
                   </tr>
                 );
               })}

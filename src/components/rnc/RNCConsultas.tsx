@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
 import FilterSidebar, { FilterValues } from '@/components/filters/FilterSidebar';
+import { formatDateBR } from '@/lib/utils';
 
 type RNCStatus = Database['public']['Enums']['rnc_status'];
 type CritLevel = Database['public']['Enums']['criticality_level'];
@@ -107,7 +108,7 @@ export default function RNCConsultas() {
                 <tr key={rnc.id} onClick={() => setSelectedRNCId(rnc.id)}
                   className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
                   <td className="px-4 py-3 font-medium text-primary">{rnc.code}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{new Date(rnc.occurrence_date).toLocaleDateString('pt-BR')}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDateBR(rnc.occurrence_date)}</td>
                   <td className="px-4 py-3 max-w-[300px] truncate">{rnc.subject}</td>
                   <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{statusLabels[rnc.status]}</Badge></td>
                   <td className="px-4 py-3">
