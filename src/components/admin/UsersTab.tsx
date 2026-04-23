@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, MailCheck, Send } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Pencil, Trash2, MailCheck, Send, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,7 @@ export default function UsersTab() {
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users'],
@@ -170,10 +171,31 @@ export default function UsersTab() {
     } catch (error: any) { toast.error(error.message); }
   };
 
+  const filteredUsers = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u: any) =>
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      ((u.companies as any)?.name || '').toLowerCase().includes(q) ||
+      ((u.sectors as any)?.name || '').toLowerCase().includes(q) ||
+      ((u.permission_profiles as any)?.name || '').toLowerCase().includes(q)
+    );
+  }, [users, searchTerm]);
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-medium">Usuários Cadastrados</h2>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h2 className="font-medium whitespace-nowrap">Usuários Cadastrados</h2>
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, e-mail, empresa, setor ou perfil..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}><Plus className="h-4 w-4 mr-1" />Novo Usuário</Button>
       </div>
       {showForm && (
@@ -234,7 +256,7 @@ export default function UsersTab() {
             <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
           </tr></thead>
           <tbody>
-            {users.map(u => {
+            {filteredUsers.map(u => {
               const isConfirmed = confirmedMap[u.user_id];
               return (
               <tr key={u.id} className="border-b last:border-0 hover:bg-muted/30">
