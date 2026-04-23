@@ -256,7 +256,7 @@ export default function UsersTab() {
             <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
           </tr></thead>
           <tbody>
-            {users.map(u => {
+            {filteredUsers.map(u => {
               const isConfirmed = confirmedMap[u.user_id];
               return (
               <tr key={u.id} className="border-b last:border-0 hover:bg-muted/30">
