@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import { formatDateBR } from '@/lib/utils';
 
 type RNCStatus = Database['public']['Enums']['rnc_status'];
 type OccurrenceType = Database['public']['Enums']['occurrence_type'];
@@ -232,7 +233,7 @@ export default function RNCDetail() {
           <div><span className="text-muted-foreground">Empresa:</span> <span className="font-medium">{(rnc.companies as any)?.name}</span></div>
           <div><span className="text-muted-foreground">Setor Receptor:</span> <span className="font-medium">{(rnc.sectors as any)?.name}</span></div>
           <div><span className="text-muted-foreground">Origem:</span> <span className="font-medium">{rnc.origin}</span></div>
-          <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{new Date(rnc.occurrence_date).toLocaleDateString('pt-BR')}</span></div>
+          <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{formatDateBR(rnc.occurrence_date)}</span></div>
           <div><span className="text-muted-foreground">Criado por:</span> <span className="font-medium">{getProfileName(rnc.created_by)}</span></div>
           <div><span className="text-muted-foreground">Aprovador:</span> <span className="font-medium">{getProfileName(rnc.approver_id)}</span></div>
           <div><span className="text-muted-foreground">Criticidade:</span> <span className="font-medium capitalize">{rnc.criticality}</span></div>
@@ -362,7 +363,7 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
         </div>
         <div className="text-xs text-muted-foreground flex gap-3">
           {stage.responsible_sector_id && <span>Setor: {getSectorName(stage.responsible_sector_id)}</span>}
-          {stage.deadline && <span>Prazo: {new Date(stage.deadline).toLocaleDateString('pt-BR')}</span>}
+          {stage.deadline && <span>Prazo: {formatDateBR(stage.deadline)}</span>}
         </div>
       </div>
 
@@ -1028,7 +1029,7 @@ function ActionPlanReadonly({ actions, profiles, showImplementation, causeAnalys
             )}
             <div className="grid grid-cols-3 gap-2 mt-1 text-xs text-muted-foreground">
               <span>Responsável: {getProfileName(a.responsible_user_id)}</span>
-              <span>Prazo: {new Date(a.deadline).toLocaleDateString('pt-BR')}</span>
+              <span>Prazo: {formatDateBR(a.deadline)}</span>
               <span>{a.is_implemented ? '✅ Implementada' : '⏳ Pendente'}</span>
             </div>
             {showImplementation && a.evidence && (
@@ -1300,7 +1301,7 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
   return (
     <div className="mt-3 space-y-3">
       <p className="text-sm text-muted-foreground">
-        {existing?.scheduled_date && `Data agendada: ${new Date(existing.scheduled_date).toLocaleDateString('pt-BR')}`}
+        {existing?.scheduled_date && `Data agendada: ${formatDateBR(existing.scheduled_date)}`}
       </p>
       <div className="flex gap-3">
         <label className={`flex items-center gap-2 px-4 py-2 rounded-md border cursor-pointer text-sm ${isEffective === true ? 'border-primary bg-primary/5' : 'border-border'}`}>
