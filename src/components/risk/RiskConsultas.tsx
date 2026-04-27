@@ -84,6 +84,7 @@ export default function RiskConsultas() {
               <tr className="border-b bg-muted/50">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Código</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Risco</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Setor</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nível</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Resposta</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
