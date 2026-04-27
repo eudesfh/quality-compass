@@ -599,16 +599,16 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Setor</Label>
-                  <Select value={stage1Sector} onValueChange={setStage1Sector}>
+                  <Select value={stage1Sector || undefined} onValueChange={setStage1Sector}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                    <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{sectors.filter((s: any) => s?.id).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Responsável</Label>
-                  <Select value={stage1User} onValueChange={setStage1User}>
+                  <Select value={stage1User || undefined} onValueChange={setStage1User}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Pessoa" /></SelectTrigger>
-                    <SelectContent>{sectorUsers.map((u: any) => <SelectItem key={u.user_id} value={u.user_id}>{u.full_name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{sectorUsers.filter((u: any) => u?.user_id).map((u: any) => <SelectItem key={u.user_id} value={u.user_id}>{u.full_name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
@@ -624,9 +624,9 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
                   <p className="text-sm font-medium">Etapa 3 — Validação do Setor Especializado</p>
                   <div className="space-y-1">
                     <Label className="text-xs">Setor Especialista</Label>
-                    <Select value={stage3Sector} onValueChange={setStage3Sector}>
+                    <Select value={stage3Sector || undefined} onValueChange={setStage3Sector}>
                       <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                      <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                      <SelectContent>{sectors.filter((s: any) => s?.id).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -635,9 +635,9 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
                   <p className="text-sm font-medium">Etapa 5 — Análise de Eficácia</p>
                   <div className="space-y-1">
                     <Label className="text-xs">Setor Especialista</Label>
-                    <Select value={stage5Sector} onValueChange={setStage5Sector}>
+                    <Select value={stage5Sector || undefined} onValueChange={setStage5Sector}>
                       <SelectTrigger className="h-9"><SelectValue placeholder="Setor" /></SelectTrigger>
-                      <SelectContent>{sectors.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                      <SelectContent>{sectors.filter((s: any) => s?.id).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
