@@ -95,10 +95,12 @@ export default function RiskConsultas() {
               {filtered.map((risk) => {
                 const level = risk.risk_level || (risk.probability * risk.severity);
                 const cls = getRiskClass(level);
+                const sectorName = sectors.find((s: any) => s.id === risk.sector_id)?.name || '—';
                 return (
                   <tr key={risk.id} onClick={() => setSelectedRiskId(risk.id)} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
                     <td className="px-4 py-3 font-medium text-primary">{risk.code}</td>
                     <td className="px-4 py-3 max-w-[300px] truncate">{risk.risk_description}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{sectorName}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className={cls.className + ' border-0 text-xs'}>{cls.label} ({level})</Badge></td>
                     <td className="px-4 py-3 capitalize text-muted-foreground">{risk.response}</td>
                     <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{statusLabels[risk.status]}</Badge></td>
@@ -107,7 +109,7 @@ export default function RiskConsultas() {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum risco encontrado</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum risco encontrado</td></tr>
               )}
             </tbody>
           </table>
