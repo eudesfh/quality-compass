@@ -133,7 +133,7 @@ export default function RiskForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Probabilidade *</Label>
-                <Select value={probability ? String(probability) : ''} onValueChange={(v) => setProbability(Number(v))}>
+                <Select value={probability ? String(probability) : undefined} onValueChange={(v) => setProbability(Number(v))}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     {[1, 2, 3].map(n => <SelectItem key={n} value={String(n)}>{n} — {probLabels[n]}</SelectItem>)}
@@ -142,7 +142,7 @@ export default function RiskForm() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Agravante (Severidade) *</Label>
-                <Select value={severity ? String(severity) : ''} onValueChange={(v) => setSeverity(Number(v))}>
+                <Select value={severity ? String(severity) : undefined} onValueChange={(v) => setSeverity(Number(v))}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     {[1, 2, 3].map(n => <SelectItem key={n} value={String(n)}>{n} — {sevLabels[n]}</SelectItem>)}
