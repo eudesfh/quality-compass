@@ -985,9 +985,9 @@ function ActionCard({ action, index, profiles, availableWhys, causeAnalysis, onU
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Responsável (Who) *</Label>
-          <Select value={action.responsible_user_id} onValueChange={(v) => onUpdate(index, 'responsible_user_id', v)}>
+          <Select value={action.responsible_user_id || undefined} onValueChange={(v) => onUpdate(index, 'responsible_user_id', v)}>
             <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>{profiles.map((p: any) => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>)}</SelectContent>
+            <SelectContent>{profiles.filter((p: any) => p?.user_id).map((p: any) => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
