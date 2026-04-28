@@ -9,6 +9,20 @@ interface State {
   error: Error | null;
 }
 
+// Erros transitórios de DOM causados por extensões do navegador
+// (Google Translate, Grammarly, etc.) que mexem na árvore de nós.
+// Não são bugs do app — recuperamos silenciosamente.
+const isTransientDomError = (err: Error | null): boolean => {
+  if (!err?.message) return false;
+  const m = err.message;
+  return (
+    m.includes("removeChild") ||
+    m.includes("insertBefore") ||
+    m.includes("The node to be removed") ||
+    m.includes("The node before which the new node is to be inserted")
+  );
+};
+
 export default class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null };
 
@@ -18,6 +32,12 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: unknown) {
     console.error('[ErrorBoundary]', error, info);
+    if (isTransientDomError(error)) {
+      // Auto-recupera no próximo tick — força um re-render limpo.
+      setTimeout(() => {
+        this.setState({ hasError: false, error: null });
+      }, 0);
+    }
   }
 
   handleReset = () => {
@@ -30,6 +50,10 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // Erros transitórios: não mostra tela de erro — espera auto-recuperar.
+      if (isTransientDomError(this.state.error)) {
+        return null;
+      }
       return (
         <div className="min-h-screen flex items-center justify-center bg-background p-6">
           <div className="max-w-md w-full bg-card border rounded-lg shadow-lg p-6 space-y-4">
