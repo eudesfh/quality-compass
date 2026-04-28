@@ -29,7 +29,7 @@ export default function TopNav() {
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(200);
       return data || [];
     },
     refetchInterval: 30000,
@@ -127,7 +127,7 @@ export default function TopNav() {
                   <button onClick={markAllRead} className="text-xs text-primary hover:underline">Marcar todas como lidas</button>
                 )}
               </div>
-              <ScrollArea className="max-h-80">
+              <ScrollArea className="h-96">
                 {notifications.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhuma notificação</p>
                 ) : (
@@ -136,11 +136,22 @@ export default function TopNav() {
                       <button
                         key={n.id}
                         onClick={() => handleNotificationClick(n)}
-                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${!n.is_read ? 'bg-primary/5' : ''}`}
+                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
+                          !n.is_read
+                            ? 'bg-primary/5 border-l-2 border-l-primary'
+                            : 'opacity-60'
+                        }`}
                       >
-                        <p className={`text-sm ${!n.is_read ? 'font-medium' : ''}`}>{n.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                        <div className="flex items-start gap-2">
+                          {!n.is_read && (
+                            <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm ${!n.is_read ? 'font-semibold text-foreground' : 'font-normal text-muted-foreground'}`}>{n.title}</p>
+                            <p className={`text-xs mt-0.5 line-clamp-2 ${!n.is_read ? 'text-foreground/80' : 'text-muted-foreground'}`}>{n.message}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
