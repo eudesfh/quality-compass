@@ -98,6 +98,7 @@ export default function RNCConsultas() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Código</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Data</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Assunto</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Setor</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Criticidade</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Responsável</th>
@@ -110,6 +111,7 @@ export default function RNCConsultas() {
                   <td className="px-4 py-3 font-medium text-primary">{rnc.code}</td>
                   <td className="px-4 py-3 text-muted-foreground">{formatDateBR(rnc.occurrence_date)}</td>
                   <td className="px-4 py-3 max-w-[300px] truncate">{rnc.subject}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{(rnc.sectors as any)?.name || '—'}</td>
                   <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{statusLabels[rnc.status]}</Badge></td>
                   <td className="px-4 py-3">
                     <Badge variant="outline" className={critColors[rnc.criticality] + ' border-0 text-xs'}>
@@ -120,7 +122,7 @@ export default function RNCConsultas() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada</td></tr>
               )}
             </tbody>
           </table>
