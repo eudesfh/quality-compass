@@ -98,6 +98,7 @@ export default function RNCConsultas() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Código</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Data</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Assunto</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Setor</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Criticidade</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Responsável</th>
