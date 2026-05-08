@@ -752,6 +752,10 @@ export type Database = {
         Args: { _rnc_id: string; _user_id: string }
         Returns: boolean
       }
+      sync_rnc_status_from_stages: {
+        Args: { _rnc_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
