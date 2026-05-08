@@ -111,6 +111,7 @@ export default function RNCConsultas() {
                   <td className="px-4 py-3 font-medium text-primary">{rnc.code}</td>
                   <td className="px-4 py-3 text-muted-foreground">{formatDateBR(rnc.occurrence_date)}</td>
                   <td className="px-4 py-3 max-w-[300px] truncate">{rnc.subject}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{(rnc.sectors as any)?.name || '—'}</td>
                   <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{statusLabels[rnc.status]}</Badge></td>
                   <td className="px-4 py-3">
                     <Badge variant="outline" className={critColors[rnc.criticality] + ' border-0 text-xs'}>
