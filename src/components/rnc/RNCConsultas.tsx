@@ -122,7 +122,7 @@ export default function RNCConsultas() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada</td></tr>
               )}
             </tbody>
           </table>
