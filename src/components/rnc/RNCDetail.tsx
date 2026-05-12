@@ -397,6 +397,19 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           {stage.stage_number === 2 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} showImplementation causeAnalysis={null} />
           )}
+          {stage.stage_number === 3 && isActive && (
+            canValidate ? (
+              <EfficacyForm rncId={rnc.id} stageId={stage.id} existing={efficacy} user={user} queryClient={queryClient} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando análise de eficácia do setor de Processos.</p>
+            )
+          )}
+          {stage.stage_number === 3 && !isActive && efficacy && (
+            <div className="text-sm mt-2">
+              <p><strong>Resultado:</strong> {efficacy.is_effective ? '✅ Eficaz' : '❌ Ineficaz'}</p>
+              {efficacy.evidence && <p className="text-muted-foreground mt-1">{efficacy.evidence}</p>}
+            </div>
+          )}
         </>
       ) : (
         // Real: 5 stages
