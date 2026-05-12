@@ -1161,21 +1161,30 @@ function ImplementationForm({ actions, user, isAdmin, isProcessos, queryClient, 
   const allImplemented = actions.every((a: any) => a.is_implemented);
 
   const handleImplement = async (actionId: string) => {
+    const text = (evidence[actionId] || '').trim();
+    const file = files[actionId];
+    if (!text && !file) {
+      toast.error('Preencha a evidência ou anexe um arquivo.');
+      return;
+    }
     setLoading(true);
     try {
-      let filePath = null;
-      const file = files[actionId];
+      let filePath: string | null = null;
       if (file) {
         const ext = file.name.split('.').pop();
-        const path = `${rncId}/${actionId}/evidence.${ext}`;
-        const { error: uploadError } = await supabase.storage.from('rnc-attachments').upload(path, file, { upsert: true });
+        const path = `${rncId}/${actionId}/evidence-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('rnc-attachments').upload(path, file, { upsert: false });
         if (uploadError) throw uploadError;
         filePath = path;
       }
-      await supabase.from('rnc_actions').update({
-        is_implemented: true, implemented_at: new Date().toISOString(),
-        evidence: evidence[actionId] || '', evidence_file_path: filePath,
-      }).eq('id', actionId);
+      const updatePayload: any = {
+        is_implemented: true,
+        implemented_at: new Date().toISOString(),
+        evidence: text,
+      };
+      if (filePath) updatePayload.evidence_file_path = filePath;
+      const { error } = await supabase.from('rnc_actions').update(updatePayload).eq('id', actionId);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['rnc-actions'] });
       toast.success('Ação implementada');
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
