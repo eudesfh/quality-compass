@@ -512,10 +512,11 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
         }).eq('id', rncId);
 
         if (isOportunidade) {
-          // 2 stages for oportunidade: Plano de Ação + Implementação
+          // 3 stages for oportunidade: Plano de Ação + Implementação + Análise de Eficácia
           await supabase.from('rnc_stages').insert([
             { rnc_id: rncId, stage_number: 1, stage_name: 'Plano de Ação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, deadline: stage1Deadline || null, status: 'em_andamento' as const },
             { rnc_id: rncId, stage_number: 2, stage_name: 'Implementação', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
+            { rnc_id: rncId, stage_number: 3, stage_name: 'Análise de Eficácia', responsible_user_id: stage1User || null, responsible_sector_id: stage1Sector || null, status: 'pendente' as const },
           ]);
         } else {
           // 5 stages for Real
