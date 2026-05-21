@@ -26,6 +26,26 @@ const critColors: Record<CritLevel, string> = {
 
 const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
 
+const getDeadlineStatus = (deadlineStr: string | null, rncStatus: string) => {
+  if (!deadlineStr) return { label: '—', className: 'text-muted-foreground bg-muted/30 border-0' };
+  
+  const deadline = new Date(deadlineStr);
+  deadline.setHours(23, 59, 59, 999);
+  const today = new Date();
+  
+  const isOverdue = today > deadline;
+  
+  if (rncStatus === 'concluida') {
+    return { label: 'Concluído', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-0' };
+  }
+  
+  if (isOverdue) {
+    return { label: 'Fora do Prazo', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-0' };
+  } else {
+    return { label: 'Dentro do Prazo', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-0' };
+  }
+};
+
 export default function RNCConsultas() {
   const { setSelectedRNCId } = useModule();
   const [search, setSearch] = useState('');
@@ -53,7 +73,7 @@ export default function RNCConsultas() {
     queryFn: async () => {
       const { data } = await supabase
         .from('rnc_occurrences')
-        .select('*, companies(name), sectors(name)')
+        .select('*, companies(name), sectors(name), rnc_stages(*)')
         .order('created_at', { ascending: false });
       return data || [];
     },
@@ -97,6 +117,8 @@ export default function RNCConsultas() {
               <tr className="border-b bg-muted/50">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Código</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Data</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Prazo Limite</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status do Prazo</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Assunto</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Setor</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
@@ -105,24 +127,36 @@ export default function RNCConsultas() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((rnc) => (
-                <tr key={rnc.id} onClick={() => setSelectedRNCId(rnc.id)}
-                  className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
-                  <td className="px-4 py-3 font-medium text-primary">{rnc.code}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDateBR(rnc.occurrence_date)}</td>
-                  <td className="px-4 py-3 max-w-[300px] truncate">{rnc.subject}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{(rnc.sectors as any)?.name || '—'}</td>
-                  <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{statusLabels[rnc.status]}</Badge></td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className={critColors[rnc.criticality] + ' border-0 text-xs'}>
-                      {rnc.criticality === 'baixa' ? 'Baixa' : rnc.criticality === 'media' ? 'Média' : 'Alta'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{getProfileName(rnc.approver_id)}</td>
-                </tr>
-              ))}
+              {filtered.map((rnc) => {
+                const stage1 = (rnc as any).rnc_stages?.find((s: any) => s.stage_number === 1);
+                const triageDeadline = stage1?.deadline;
+                const deadlineStatus = getDeadlineStatus(triageDeadline, rnc.status);
+
+                return (
+                  <tr key={rnc.id} onClick={() => setSelectedRNCId(rnc.id)}
+                    className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
+                    <td className="px-4 py-3 font-medium text-primary">{rnc.code}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDateBR(rnc.occurrence_date)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{triageDeadline ? formatDateBR(triageDeadline) : '—'}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className={`${deadlineStatus.className} text-xs font-semibold`}>
+                        {deadlineStatus.label}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 max-w-[300px] truncate">{rnc.subject}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{(rnc.sectors as any)?.name || '—'}</td>
+                    <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{statusLabels[rnc.status]}</Badge></td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className={critColors[rnc.criticality] + ' border-0 text-xs'}>
+                        {rnc.criticality === 'baixa' ? 'Baixa' : rnc.criticality === 'media' ? 'Média' : 'Alta'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{getProfileName(rnc.approver_id)}</td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada</td></tr>
+                <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma ocorrência encontrada</td></tr>
               )}
             </tbody>
           </table>

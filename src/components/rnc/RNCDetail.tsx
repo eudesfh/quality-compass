@@ -374,11 +374,9 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
       )}
 
       {isOportunidade ? (
-        // Oportunidade: stage 1 = Plano de Ação, stage 2 = Implementação
-        <>
-          {stage.stage_number === 1 && isActive && (
+        // Oportunidade: stage 1           {stage.stage_number === 1 && isActive && (
             canExecuteStage ? (
-              <ActionPlanFormOportunidade rncId={rnc.id} stageId={stage.id} existing={actions}
+              <ActionPlanFormOportunidade rncId={rnc.id} stageId={stage.id} existing={actions} rnc={rnc}
                 user={user} queryClient={queryClient} profiles={profiles} />
             ) : (
               <p className="text-sm text-muted-foreground py-2">⏳ Aguardando elaboração do Plano de Ação pelo responsável.</p>
@@ -424,23 +422,30 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           {stage.stage_number === 1 && !isActive && causeAnalysis && (
             <CauseAnalysisReadonly causeAnalysis={causeAnalysis} />
           )}
-
+ 
           {stage.stage_number === 2 && isActive && (
             canExecuteStage ? (
-              <ActionPlanForm rncId={rnc.id} stageId={stage.id} existing={actions} user={user} queryClient={queryClient} profiles={profiles} causeAnalysis={causeAnalysis} />
+              <ActionPlanForm rncId={rnc.id} stageId={stage.id} existing={actions} rnc={rnc} user={user} queryClient={queryClient} profiles={profiles} causeAnalysis={causeAnalysis} />
             ) : (
               <p className="text-sm text-muted-foreground py-2">⏳ Aguardando elaboração do Plano de Ação pelo responsável.</p>
             )
           )}
           {stage.stage_number === 2 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />
+          )}adonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />
           )}
 
           {stage.stage_number === 3 && isActive && (
             canValidate ? (
-              <ValidationForm stageId={stage.id} rncId={rnc.id} rnc={rnc} queryClient={queryClient} sectors={sectors} />
+              <div className="space-y-4">
+                {actions.length > 0 && <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />}
+                <ValidationForm stageId={stage.id} rncId={rnc.id} rnc={rnc} queryClient={queryClient} sectors={sectors} />
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground py-2">⏳ Aguardando validação do setor de Processos.</p>
+              <div className="space-y-4">
+                {actions.length > 0 && <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />}
+                <p className="text-sm text-muted-foreground py-2">⏳ Aguardando validação do setor de Processos.</p>
+              </div>
             )
           )}
           {stage.stage_number === 3 && !isActive && (stage.status === 'aprovado' || stage.status === 'concluido') && (
@@ -492,7 +497,7 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   const [stage3Sector, setStage3Sector] = useState('');
   const [stage5Sector, setStage5Sector] = useState('');
 
-  const sectorUsers = profiles.filter((p: any) => p.sector_id === stage1Sector);
+  const sectorUsers = profiles.filter((p: any) => p.sector_id === stage1Sector && (!rnc?.company_id || p.company_id === rnc.company_id));
 
   const handleApprove = async () => {
     setLoading(true);
@@ -761,9 +766,10 @@ function CauseAnalysisReadonly({ causeAnalysis }: any) {
 }
 
 /* ======================== ACTION PLAN (for Real type) ======================== */
-function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles, causeAnalysis }: any) {
+function ActionPlanForm({ rncId, stageId, existing, rnc, user, queryClient, profiles, causeAnalysis }: any) {
   const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
   const [loading, setLoading] = useState(false);
+  const filteredProfiles = profiles.filter((p: any) => p?.user_id && (!rnc?.company_id || p.company_id === rnc.company_id));
 
   const availableWhys: { number: number; text: string }[] = [];
   if (causeAnalysis) {
@@ -857,7 +863,7 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles,
         <Button size="sm" variant="outline" onClick={addAction}>+ Adicionar Ação</Button>
       </div>
       {actions.map((action: any, i: number) => (
-        <ActionCard key={action.id || i} action={action} index={i} profiles={profiles}
+        <ActionCard key={action.id || i} action={action} index={i} profiles={filteredProfiles}
           availableWhys={availableWhys} causeAnalysis={causeAnalysis}
           onUpdate={updateAction} onSave={handleSaveAction} onDelete={handleDeleteAction} loading={loading} />
       ))}
@@ -870,9 +876,10 @@ function ActionPlanForm({ rncId, stageId, existing, user, queryClient, profiles,
 }
 
 /* ======================== ACTION PLAN (for Oportunidade type) ======================== */
-function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClient, profiles }: any) {
+function ActionPlanFormOportunidade({ rncId, stageId, existing, rnc, user, queryClient, profiles }: any) {
   const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
   const [loading, setLoading] = useState(false);
+  const filteredProfiles = profiles.filter((p: any) => p?.user_id && (!rnc?.company_id || p.company_id === rnc.company_id));
 
   const emptyAction = { what_to_do: '', why_to_do: '', how_to_do: '', responsible_user_id: '', deadline: '', cost: '' };
   const addAction = () => setActions([...actions, { ...emptyAction, _new: true }]);
@@ -948,7 +955,7 @@ function ActionPlanFormOportunidade({ rncId, stageId, existing, user, queryClien
         <Button size="sm" variant="outline" onClick={addAction}>+ Adicionar Ação</Button>
       </div>
       {actions.map((action: any, i: number) => (
-        <ActionCard key={action.id || i} action={action} index={i} profiles={profiles}
+        <ActionCard key={action.id || i} action={action} index={i} profiles={filteredProfiles}
           availableWhys={[]} causeAnalysis={null}
           onUpdate={updateAction} onSave={handleSaveAction} onDelete={handleDeleteAction} loading={loading} />
       ))}
@@ -1032,22 +1039,53 @@ function ActionPlanReadonly({ actions, profiles, showImplementation, causeAnalys
     return causeAnalysis[`why_${num}`];
   };
   return (
-    <div className="mt-3">
-      <h4 className="text-sm font-medium mb-2">Plano de Ação ({actions.length} ações)</h4>
-      <div className="space-y-2">
+    <div className="mt-3 border rounded-lg p-4 bg-muted/20">
+      <h4 className="text-sm font-semibold mb-3 text-foreground">Plano de Ação ({actions.length} ações)</h4>
+      <div className="space-y-3">
         {actions.map((a: any, i: number) => (
-          <div key={a.id} className="bg-muted/50 rounded p-3 text-sm">
-            <p className="font-medium">Ação {i + 1}: {a.what_to_do}</p>
-            {a.related_cause_why && causeAnalysis && (
-              <p className="text-xs text-primary mt-0.5">Causa: P{a.related_cause_why} — {getWhyText(a.related_cause_why)}</p>
-            )}
-            <div className="grid grid-cols-3 gap-2 mt-1 text-xs text-muted-foreground">
-              <span>Responsável: {getProfileName(a.responsible_user_id)}</span>
-              <span>Prazo: {formatDateBR(a.deadline)}</span>
-              <span>{a.is_implemented ? '✅ Implementada' : '⏳ Pendente'}</span>
+          <div key={a.id} className="bg-card border rounded p-3 text-sm space-y-2">
+            <p className="font-semibold text-primary">Ação {i + 1}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm mt-1">
+              <div>
+                <strong className="text-muted-foreground font-medium">O que fazer? (What):</strong> 
+                <span className="text-foreground ml-1">{a.what_to_do}</span>
+              </div>
+              <div>
+                <strong className="text-muted-foreground font-medium">Por que fazer? (Why):</strong> 
+                <span className="text-foreground ml-1">{a.why_to_do}</span>
+              </div>
+              <div className="col-span-1 md:col-span-2">
+                <strong className="text-muted-foreground font-medium">Como fazer? (How):</strong> 
+                <span className="text-foreground ml-1 whitespace-pre-wrap">{a.how_to_do}</span>
+              </div>
+              <div>
+                <strong className="text-muted-foreground font-medium">Responsável (Who):</strong> 
+                <span className="text-foreground ml-1">{getProfileName(a.responsible_user_id)}</span>
+              </div>
+              <div>
+                <strong className="text-muted-foreground font-medium">Prazo (When):</strong> 
+                <span className="text-foreground ml-1">{formatDateBR(a.deadline)}</span>
+              </div>
+              {a.cost !== null && a.cost !== undefined && (
+                <div>
+                  <strong className="text-muted-foreground font-medium">Custo (How much):</strong> 
+                  <span className="text-foreground ml-1">R$ {a.cost}</span>
+                </div>
+              )}
+              <div>
+                <strong className="text-muted-foreground font-medium">Status:</strong> 
+                <span className="text-foreground ml-1">{a.is_implemented ? '✅ Implementada' : '⏳ Pendente'}</span>
+              </div>
             </div>
+            {a.related_cause_why && causeAnalysis && (
+              <p className="text-xs text-primary mt-1 border-t pt-1">
+                Causa Relacionada: P{a.related_cause_why} — {getWhyText(a.related_cause_why)}
+              </p>
+            )}
             {showImplementation && a.evidence && (
-              <p className="text-xs text-muted-foreground mt-1">Evidência: {a.evidence}</p>
+              <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded">
+                <strong>Evidência:</strong> {a.evidence}
+              </p>
             )}
             {showImplementation && a.evidence_file_path && (
               <SignedFileLink path={a.evidence_file_path} className="text-xs text-primary hover:underline mt-1 flex items-center gap-1">
@@ -1068,12 +1106,13 @@ function ValidationForm({ stageId, rncId, rnc, queryClient, sectors }: any) {
   const [loading, setLoading] = useState(false);
   const [editCriticality, setEditCriticality] = useState<CritLevel>(rnc.criticality);
   const [editType, setEditType] = useState<OccurrenceType>(rnc.reclassified_type || rnc.occurrence_type);
+  const [editSectorId, setEditSectorId] = useState<string>(rnc.sector_id);
 
   const handleValidate = async () => {
     setLoading(true);
     try {
       await supabase.from('rnc_occurrences').update({
-        criticality: editCriticality, reclassified_type: editType,
+        criticality: editCriticality, reclassified_type: editType, sector_id: editSectorId,
       }).eq('id', rncId);
 
       if (reject) {
@@ -1107,7 +1146,7 @@ function ValidationForm({ stageId, rncId, rnc, queryClient, sectors }: any) {
   return (
     <div className="mt-3 space-y-4">
       <p className="text-sm text-muted-foreground">O setor especializado pode editar informações da ocorrência e validar as etapas 1 e 2.</p>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label className="text-xs">Criticidade</Label>
           <Select value={editCriticality} onValueChange={(v) => setEditCriticality(v as CritLevel)}>
@@ -1126,6 +1165,17 @@ function ValidationForm({ stageId, rncId, rnc, queryClient, sectors }: any) {
             <SelectContent>
               <SelectItem value="real">Real (NC)</SelectItem>
               <SelectItem value="oportunidade">Oportunidade de Melhoria</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Setor Receptor</Label>
+          <Select value={editSectorId} onValueChange={setEditSectorId}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
+            <SelectContent>
+              {sectors.filter((s: any) => s?.id).map((s: any) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
