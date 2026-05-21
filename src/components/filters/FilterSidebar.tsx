@@ -11,6 +11,7 @@ export interface FilterValues {
   companyType: string;
   sector: string;
   status: string;
+  deadlineStatus?: string; // Optional field for RNC deadline status
 }
 
 interface FilterSidebarProps {
@@ -20,18 +21,44 @@ interface FilterSidebarProps {
   sectors: { id: string; name: string }[];
   statusOptions: { value: string; label: string }[];
   title?: string;
+  showDeadlineStatusFilter?: boolean;
+  deadlineStatusOptions?: { value: string; label: string }[];
 }
 
-export default function FilterSidebar({ filters, onChange, companies, sectors, statusOptions, title = 'Filtros' }: FilterSidebarProps) {
+export default function FilterSidebar({ 
+  filters, 
+  onChange, 
+  companies, 
+  sectors, 
+  statusOptions, 
+  title = 'Filtros',
+  showDeadlineStatusFilter = false,
+  deadlineStatusOptions = []
+}: FilterSidebarProps) {
   const update = (key: keyof FilterValues, value: string) => {
     onChange({ ...filters, [key]: value });
   };
 
   const clearAll = () => {
-    onChange({ dateFrom: '', dateTo: '', company: 'all', companyType: 'all', sector: 'all', status: 'all' });
+    onChange({ 
+      dateFrom: '', 
+      dateTo: '', 
+      company: 'all', 
+      companyType: 'all', 
+      sector: 'all', 
+      status: 'all',
+      ...(showDeadlineStatusFilter ? { deadlineStatus: 'all' } : {})
+    });
   };
 
-  const hasFilters = filters.dateFrom || filters.dateTo || filters.company !== 'all' || filters.companyType !== 'all' || filters.sector !== 'all' || filters.status !== 'all';
+  const hasFilters = 
+    filters.dateFrom || 
+    filters.dateTo || 
+    filters.company !== 'all' || 
+    filters.companyType !== 'all' || 
+    filters.sector !== 'all' || 
+    filters.status !== 'all' ||
+    (showDeadlineStatusFilter && filters.deadlineStatus && filters.deadlineStatus !== 'all');
 
   return (
     <aside className="w-64 shrink-0 bg-card border-r min-h-[calc(100vh-7rem)] p-4 space-y-5">
@@ -98,6 +125,19 @@ export default function FilterSidebar({ filters, onChange, companies, sectors, s
           </SelectContent>
         </Select>
       </div>
+
+      {showDeadlineStatusFilter && deadlineStatusOptions.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Status do Prazo</Label>
+          <Select value={filters.deadlineStatus || 'all'} onValueChange={(v) => update('deadlineStatus', v)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {deadlineStatusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </aside>
   );
 }

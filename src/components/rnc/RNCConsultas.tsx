@@ -46,11 +46,17 @@ const getDeadlineStatus = (deadlineStr: string | null, rncStatus: string) => {
   }
 };
 
+const deadlineStatusOptions = [
+  { value: 'dentro', label: 'Dentro do Prazo' },
+  { value: 'fora', label: 'Fora do Prazo' },
+  { value: 'concluido', label: 'Concluído' },
+];
+
 export default function RNCConsultas() {
   const { setSelectedRNCId } = useModule();
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<FilterValues>({
-    dateFrom: '', dateTo: '', company: 'all', companyType: 'all', sector: 'all', status: 'all',
+    dateFrom: '', dateTo: '', company: 'all', companyType: 'all', sector: 'all', status: 'all', deadlineStatus: 'all',
   });
 
   const { data: companies = [] } = useQuery({
@@ -89,6 +95,17 @@ export default function RNCConsultas() {
     if (filters.companyType !== 'all' && r.company_type !== filters.companyType) return false;
     if (filters.dateFrom && r.occurrence_date < filters.dateFrom) return false;
     if (filters.dateTo && r.occurrence_date > filters.dateTo) return false;
+
+    // Filter by Deadline Status
+    if (filters.deadlineStatus && filters.deadlineStatus !== 'all') {
+      const triageStage = r.rnc_stages?.find((s: any) => s.stage_number === 1);
+      const statusBadge = getDeadlineStatus(triageStage?.deadline || null, r.status);
+      
+      if (filters.deadlineStatus === 'dentro' && statusBadge.label !== 'Dentro do Prazo') return false;
+      if (filters.deadlineStatus === 'fora' && statusBadge.label !== 'Fora do Prazo') return false;
+      if (filters.deadlineStatus === 'concluido' && statusBadge.label !== 'Concluído') return false;
+    }
+
     return true;
   });
 
@@ -101,6 +118,8 @@ export default function RNCConsultas() {
         sectors={sectors}
         statusOptions={statusOptions}
         title="Filtros — RNC"
+        showDeadlineStatusFilter={true}
+        deadlineStatusOptions={deadlineStatusOptions}
       />
       <div className="flex-1 p-6">
         <div className="flex items-center gap-3 mb-4">

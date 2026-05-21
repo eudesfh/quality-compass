@@ -39,6 +39,7 @@ export default function RNCDashboard() {
   const statusCounts: Record<string, number> = {};
   const sectorCounts: Record<string, number> = {};
   const originCounts: Record<string, number> = {};
+  const typeCounts = { real: 0, oportunidade: 0, potencial: 0 };
   const critCounts = { baixa: 0, media: 0, alta: 0 };
 
   filteredRncs.forEach(r => {
@@ -49,6 +50,9 @@ export default function RNCDashboard() {
     originCounts[originName] = (originCounts[originName] || 0) + 1;
     if (r.criticality in critCounts) {
       critCounts[r.criticality as keyof typeof critCounts]++;
+    }
+    if (r.occurrence_type in typeCounts) {
+      typeCounts[r.occurrence_type as keyof typeof typeCounts]++;
     }
   });
 
@@ -66,6 +70,13 @@ export default function RNCDashboard() {
     { name: 'Média', value: critCounts.media, color: 'hsl(37, 91%, 44%)' },
     { name: 'Alta', value: critCounts.alta, color: 'hsl(0, 74%, 50%)' },
   ];
+  const typeData = [
+    { name: 'Não Conformidade (NC)', value: typeCounts.real, color: 'hsl(346, 84%, 61%)' },
+    { name: 'Oportunidade', value: typeCounts.oportunidade, color: 'hsl(199, 89%, 48%)' },
+  ];
+  if (typeCounts.potencial > 0) {
+    typeData.push({ name: 'NC Potencial', value: typeCounts.potencial, color: 'hsl(37, 91%, 44%)' });
+  }
 
   return (
     <div className="p-6 animate-fade-in space-y-6">
@@ -111,74 +122,101 @@ export default function RNCDashboard() {
       </div>
 
       {total > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border bg-card shadow-sm">
-            <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Status</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={statusData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                  <Bar dataKey="value" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} maxBarSize={45} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="border bg-card shadow-sm">
+              <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Status</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={statusData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                    <Bar dataKey="value" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} maxBarSize={45} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-          <Card className="border bg-card shadow-sm">
-            <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Criticidade</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie 
-                    data={critData} 
-                    cx="50%" 
-                    cy="50%" 
-                    innerRadius={60} 
-                    outerRadius={85} 
-                    paddingAngle={4} 
-                    dataKey="value" 
-                    label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
-                  >
-                    {critData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            <Card className="border bg-card shadow-sm">
+              <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Criticidade</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie 
+                      data={critData} 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={60} 
+                      outerRadius={85} 
+                      paddingAngle={4} 
+                      dataKey="value" 
+                      label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                    >
+                      {critData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-          <Card className="border bg-card shadow-sm">
-            <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Setor</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={sectorData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" width={110} />
-                  <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                  <Bar dataKey="value" fill="hsl(262, 83%, 58%)" radius={[0, 4, 4, 0]} maxBarSize={25} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            <Card className="border bg-card shadow-sm">
+              <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Tipo de Ocorrência</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie 
+                      data={typeData} 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={60} 
+                      outerRadius={85} 
+                      paddingAngle={4} 
+                      dataKey="value" 
+                      label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                    >
+                      {typeData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card className="border bg-card shadow-sm">
-            <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Origem</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={originData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" width={120} />
-                  <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                  <Bar dataKey="value" fill="hsl(142, 72%, 29%)" radius={[0, 4, 4, 0]} maxBarSize={25} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border bg-card shadow-sm">
+              <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Setor</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={sectorData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" width={110} />
+                    <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                    <Bar dataKey="value" fill="hsl(262, 83%, 58%)" radius={[0, 4, 4, 0]} maxBarSize={25} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="border bg-card shadow-sm">
+              <CardHeader><CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Por Origem</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={originData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(215, 16%, 47%)" width={120} />
+                    <Tooltip contentStyle={{ background: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                    <Bar dataKey="value" fill="hsl(142, 72%, 29%)" radius={[0, 4, 4, 0]} maxBarSize={25} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       ) : (
         <div className="border bg-card rounded-lg py-16 text-center shadow-sm">
