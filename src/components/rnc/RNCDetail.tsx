@@ -374,7 +374,9 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
       )}
 
       {isOportunidade ? (
-        // Oportunidade: stage 1           {stage.stage_number === 1 && isActive && (
+        <>
+          {/* Oportunidade: stage 1 */}
+          {stage.stage_number === 1 && isActive && (
             canExecuteStage ? (
               <ActionPlanFormOportunidade rncId={rnc.id} stageId={stage.id} existing={actions} rnc={rnc}
                 user={user} queryClient={queryClient} profiles={profiles} />
@@ -432,7 +434,6 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
           )}
           {stage.stage_number === 2 && !isActive && actions.length > 0 && (
             <ActionPlanReadonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />
-          )}adonly actions={actions} profiles={profiles} causeAnalysis={causeAnalysis} />
           )}
 
           {stage.stage_number === 3 && isActive && (
