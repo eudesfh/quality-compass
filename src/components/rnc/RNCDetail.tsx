@@ -498,7 +498,8 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   const [stage3Sector, setStage3Sector] = useState('');
   const [stage5Sector, setStage5Sector] = useState('');
 
-  const sectorUsers = profiles.filter((p: any) => p.sector_id === stage1Sector && (!rnc?.company_id || p.company_id === rnc.company_id));
+  const sectorMatch = profiles.filter((p: any) => p?.user_id && stage1Sector && p.sector_id === stage1Sector);
+  const sectorUsers = sectorMatch.length > 0 ? sectorMatch : profiles.filter((p: any) => p?.user_id);
 
   const handleApprove = async () => {
     setLoading(true);
