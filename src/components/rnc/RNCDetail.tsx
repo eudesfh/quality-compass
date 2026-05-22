@@ -880,7 +880,7 @@ function ActionPlanForm({ rncId, stageId, existing, rnc, user, queryClient, prof
 function ActionPlanFormOportunidade({ rncId, stageId, existing, rnc, user, queryClient, profiles }: any) {
   const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
   const [loading, setLoading] = useState(false);
-  const filteredProfiles = profiles.filter((p: any) => p?.user_id && (!rnc?.company_id || p.company_id === rnc.company_id));
+  const filteredProfiles = profiles.filter((p: any) => p?.user_id && (!rnc?.sector_id || p.sector_id === rnc.sector_id));
 
   const emptyAction = { what_to_do: '', why_to_do: '', how_to_do: '', responsible_user_id: '', deadline: '', cost: '' };
   const addAction = () => setActions([...actions, { ...emptyAction, _new: true }]);
