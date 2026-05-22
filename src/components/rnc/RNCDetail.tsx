@@ -770,7 +770,8 @@ function CauseAnalysisReadonly({ causeAnalysis }: any) {
 function ActionPlanForm({ rncId, stageId, existing, rnc, user, queryClient, profiles, causeAnalysis }: any) {
   const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
   const [loading, setLoading] = useState(false);
-  const filteredProfiles = profiles.filter((p: any) => p?.user_id && (!rnc?.sector_id || p.sector_id === rnc.sector_id));
+  const sectorProfiles = profiles.filter((p: any) => p?.user_id && rnc?.sector_id && p.sector_id === rnc.sector_id);
+  const filteredProfiles = sectorProfiles.length > 0 ? sectorProfiles : profiles.filter((p: any) => p?.user_id);
 
   const availableWhys: { number: number; text: string }[] = [];
   if (causeAnalysis) {
