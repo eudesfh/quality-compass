@@ -498,7 +498,8 @@ function TriageSection({ rncId, rnc, profiles, sectors, queryClient, user }: any
   const [stage3Sector, setStage3Sector] = useState('');
   const [stage5Sector, setStage5Sector] = useState('');
 
-  const sectorUsers = profiles.filter((p: any) => p.sector_id === stage1Sector && (!rnc?.company_id || p.company_id === rnc.company_id));
+  const sectorMatch = profiles.filter((p: any) => p?.user_id && stage1Sector && p.sector_id === stage1Sector);
+  const sectorUsers = sectorMatch.length > 0 ? sectorMatch : profiles.filter((p: any) => p?.user_id);
 
   const handleApprove = async () => {
     setLoading(true);
@@ -770,7 +771,8 @@ function CauseAnalysisReadonly({ causeAnalysis }: any) {
 function ActionPlanForm({ rncId, stageId, existing, rnc, user, queryClient, profiles, causeAnalysis }: any) {
   const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
   const [loading, setLoading] = useState(false);
-  const filteredProfiles = profiles.filter((p: any) => p?.user_id && (!rnc?.company_id || p.company_id === rnc.company_id));
+  const sectorProfiles = profiles.filter((p: any) => p?.user_id && rnc?.sector_id && p.sector_id === rnc.sector_id);
+  const filteredProfiles = sectorProfiles.length > 0 ? sectorProfiles : profiles.filter((p: any) => p?.user_id);
 
   const availableWhys: { number: number; text: string }[] = [];
   if (causeAnalysis) {
@@ -880,7 +882,8 @@ function ActionPlanForm({ rncId, stageId, existing, rnc, user, queryClient, prof
 function ActionPlanFormOportunidade({ rncId, stageId, existing, rnc, user, queryClient, profiles }: any) {
   const [actions, setActions] = useState<any[]>(existing.length > 0 ? existing : []);
   const [loading, setLoading] = useState(false);
-  const filteredProfiles = profiles.filter((p: any) => p?.user_id && (!rnc?.company_id || p.company_id === rnc.company_id));
+  const sectorProfiles = profiles.filter((p: any) => p?.user_id && rnc?.sector_id && p.sector_id === rnc.sector_id);
+  const filteredProfiles = sectorProfiles.length > 0 ? sectorProfiles : profiles.filter((p: any) => p?.user_id);
 
   const emptyAction = { what_to_do: '', why_to_do: '', how_to_do: '', responsible_user_id: '', deadline: '', cost: '' };
   const addAction = () => setActions([...actions, { ...emptyAction, _new: true }]);
