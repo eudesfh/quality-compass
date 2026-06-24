@@ -53,11 +53,7 @@ const deadlineStatusOptions = [
 ];
 
 export default function RNCConsultas() {
-  const { setSelectedRNCId } = useModule();
-  const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<FilterValues>({
-    dateFrom: '', dateTo: '', company: 'all', companyType: 'all', sector: 'all', status: 'all', deadlineStatus: 'all',
-  });
+  const { setSelectedRNCId, rncFilters: filters, setRncFilters: setFilters, rncSearch: search, setRncSearch: setSearch } = useModule();
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies'],

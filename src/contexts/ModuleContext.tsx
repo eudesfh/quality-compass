@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import type { FilterValues } from '@/components/filters/FilterSidebar';
 
 export type Module = 'rnc' | 'risk';
 export type SubView = 'inicio' | 'consultas' | 'visao-geral';
@@ -29,6 +30,16 @@ interface ModuleContextType {
   setShowAdminPanel: (show: boolean) => void;
   rncPreFill: RNCPreFill | null;
   setRncPreFill: (preFill: RNCPreFill | null) => void;
+  
+  // Persistent filter states for Consultas screens
+  rncFilters: FilterValues;
+  setRncFilters: (filters: FilterValues | ((prev: FilterValues) => FilterValues)) => void;
+  rncSearch: string;
+  setRncSearch: (search: string) => void;
+  riskFilters: FilterValues;
+  setRiskFilters: (filters: FilterValues | ((prev: FilterValues) => FilterValues)) => void;
+  riskSearch: string;
+  setRiskSearch: (search: string) => void;
 }
 
 const ModuleContext = createContext<ModuleContextType | null>(null);
@@ -43,6 +54,28 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [rncPreFill, setRncPreFill] = useState<RNCPreFill | null>(null);
 
+  // Default persistent filter values
+  const [rncFilters, setRncFilters] = useState<FilterValues>({
+    dateFrom: '',
+    dateTo: '',
+    company: 'all',
+    companyType: 'all',
+    sector: 'all',
+    status: 'all',
+    deadlineStatus: 'all',
+  });
+  const [rncSearch, setRncSearch] = useState('');
+
+  const [riskFilters, setRiskFilters] = useState<FilterValues>({
+    dateFrom: '',
+    dateTo: '',
+    company: 'all',
+    companyType: 'all',
+    sector: 'all',
+    status: 'all',
+  });
+  const [riskSearch, setRiskSearch] = useState('');
+
   return (
     <ModuleContext.Provider value={{
       activeModule, setActiveModule,
@@ -53,6 +86,11 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
       selectedRiskId, setSelectedRiskId,
       showAdminPanel, setShowAdminPanel,
       rncPreFill, setRncPreFill,
+      
+      rncFilters, setRncFilters,
+      rncSearch, setRncSearch,
+      riskFilters, setRiskFilters,
+      riskSearch, setRiskSearch,
     }}>
       {children}
     </ModuleContext.Provider>

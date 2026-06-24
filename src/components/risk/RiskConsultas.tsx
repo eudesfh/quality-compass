@@ -25,11 +25,7 @@ const getRiskClass = (level: number) => {
 };
 
 export default function RiskConsultas() {
-  const { setSelectedRiskId } = useModule();
-  const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<FilterValues>({
-    dateFrom: '', dateTo: '', company: 'all', companyType: 'all', sector: 'all', status: 'all',
-  });
+  const { setSelectedRiskId, riskFilters: filters, setRiskFilters: setFilters, riskSearch: search, setRiskSearch: setSearch } = useModule();
 
   const { data: companies = [] } = useQuery({
     queryKey: ['companies'],
