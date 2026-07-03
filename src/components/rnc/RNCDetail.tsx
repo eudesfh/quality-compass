@@ -337,6 +337,17 @@ export default function RNCDetail() {
           </div>
         </div>
       )}
+
+      {isAdmin && adminEditOpen && (
+        <AdminEditRNCDialog
+          open={adminEditOpen}
+          onOpenChange={setAdminEditOpen}
+          rnc={rnc}
+          profiles={profiles}
+          sectors={sectors}
+          queryClient={queryClient}
+        />
+      )}
     </div>
   );
 }
