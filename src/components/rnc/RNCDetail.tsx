@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { CheckCircle, XCircle, Clock, Upload, Paperclip, FileText, ArrowLeft, Plus } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Upload, Paperclip, FileText, ArrowLeft, Plus, Pencil } from 'lucide-react';
+import AdminEditRNCDialog from './AdminEditRNCDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -135,6 +136,7 @@ export default function RNCDetail() {
   };
 
   const [viewingStage, setViewingStage] = useState<number | null>(null);
+  const [adminEditOpen, setAdminEditOpen] = useState(false);
 
   if (!rnc) return <div className="p-6">Carregando...</div>;
 
@@ -222,6 +224,11 @@ export default function RNCDetail() {
             {effectiveType === 'oportunidade' && (rnc.status === 'concluida' || rnc.status === 'plano_acao') && (
               <Button variant="outline" size="sm" onClick={handleCreateRealFromOportunidade}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Criar NC Real
+              </Button>
+            )}
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => setAdminEditOpen(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
               </Button>
             )}
             <Button variant="destructive" size="sm" onClick={handleDeleteRNC}>
@@ -329,6 +336,17 @@ export default function RNCDetail() {
             />
           </div>
         </div>
+      )}
+
+      {isAdmin && adminEditOpen && (
+        <AdminEditRNCDialog
+          open={adminEditOpen}
+          onOpenChange={setAdminEditOpen}
+          rnc={rnc}
+          profiles={profiles}
+          sectors={sectors}
+          queryClient={queryClient}
+        />
       )}
     </div>
   );
