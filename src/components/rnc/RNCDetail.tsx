@@ -136,6 +136,7 @@ export default function RNCDetail() {
   };
 
   const [viewingStage, setViewingStage] = useState<number | null>(null);
+  const [adminEditOpen, setAdminEditOpen] = useState(false);
 
   if (!rnc) return <div className="p-6">Carregando...</div>;
 
