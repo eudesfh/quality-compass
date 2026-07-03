@@ -226,6 +226,11 @@ export default function RNCDetail() {
                 <Plus className="h-3.5 w-3.5 mr-1" /> Criar NC Real
               </Button>
             )}
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => setAdminEditOpen(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+              </Button>
+            )}
             <Button variant="destructive" size="sm" onClick={handleDeleteRNC}>
               {canDeleteDirectly ? 'Excluir' : 'Solicitar Exclusão'}
             </Button>
