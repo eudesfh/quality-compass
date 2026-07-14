@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Edit2, Save, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDateBR } from '@/lib/utils';
 import { toast } from 'sonner';
+import AdminEditRiskDialog from './AdminEditRiskDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type RiskStatus = Database['public']['Enums']['risk_status'];
@@ -45,6 +46,7 @@ export default function RiskDetail() {
   const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [adminEditOpen, setAdminEditOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { data: risk } = useQuery({
@@ -145,10 +147,15 @@ export default function RiskDetail() {
             <p className="text-foreground">{risk.risk_description}</p>
           </div>
           <div className="flex gap-2">
+            {isAdmin && !editing && (
+              <Button variant="outline" size="sm" onClick={() => setAdminEditOpen(true)} className="gap-1">
+                <Pencil className="h-3.5 w-3.5" /> Editar (Admin)
+              </Button>
+            )}
             {(risk.created_by === user?.id || isAdmin) && !editing && (
               <>
                 <Button variant="outline" size="sm" onClick={startEditing} className="gap-1">
-                  <Edit2 className="h-3.5 w-3.5" /> Editar
+                  <Edit2 className="h-3.5 w-3.5" /> Editar Status
                 </Button>
                 <Button variant="destructive" size="sm" onClick={handleDelete} disabled={loading} className="gap-1">
                   <Trash2 className="h-3.5 w-3.5" /> Excluir
@@ -209,6 +216,9 @@ export default function RiskDetail() {
             <Button onClick={handleSave} disabled={loading} className="gap-1"><Save className="h-3.5 w-3.5" /> Salvar</Button>
           </div>
         </div>
+      )}
+      {isAdmin && adminEditOpen && (
+        <AdminEditRiskDialog open={adminEditOpen} onOpenChange={setAdminEditOpen} risk={risk} queryClient={queryClient} />
       )}
     </div>
   );

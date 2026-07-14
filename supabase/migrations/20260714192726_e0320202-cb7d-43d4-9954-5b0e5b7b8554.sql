@@ -1,0 +1,1 @@
+CREATE POLICY "Delete RNC actions" ON public.rnc_actions FOR DELETE USING ((auth.uid() = responsible_user_id) OR public.has_rnc_access(auth.uid(), rnc_id));
