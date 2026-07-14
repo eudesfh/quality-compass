@@ -46,6 +46,7 @@ export default function RiskDetail() {
   const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [adminEditOpen, setAdminEditOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { data: risk } = useQuery({
