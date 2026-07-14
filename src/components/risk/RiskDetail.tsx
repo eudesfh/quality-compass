@@ -217,6 +217,9 @@ export default function RiskDetail() {
           </div>
         </div>
       )}
+      {isAdmin && adminEditOpen && (
+        <AdminEditRiskDialog open={adminEditOpen} onOpenChange={setAdminEditOpen} risk={risk} queryClient={queryClient} />
+      )}
     </div>
   );
 }
