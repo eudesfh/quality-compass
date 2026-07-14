@@ -1378,10 +1378,10 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         toast.success('RNC concluída com eficácia!');
       } else {
         await supabase.from('rnc_stages').update({ status: 'reprovado' }).eq('id', stageId);
-        const { data: stage2 } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_number', 2).single();
-        if (stage2) await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', stage2.id);
-        await supabase.from('rnc_occurrences').update({ status: 'plano_acao' }).eq('id', rncId);
-        toast.info('Eficácia não comprovada. Retornando ao Plano de Ação.');
+        const { data: implStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_name', 'Implementação').maybeSingle();
+        if (implStage) await supabase.from('rnc_stages').update({ status: 'em_andamento', completed_at: null }).eq('id', implStage.id);
+        await supabase.from('rnc_occurrences').update({ status: 'implementacao' }).eq('id', rncId);
+        toast.info('Eficácia não comprovada. Retornando à etapa de Implementação para ajuste do responsável.');
       }
       queryClient.invalidateQueries({ queryKey: ['rnc-efficacy'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
