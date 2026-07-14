@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Edit2, Save, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDateBR } from '@/lib/utils';
 import { toast } from 'sonner';
+import AdminEditRiskDialog from './AdminEditRiskDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type RiskStatus = Database['public']['Enums']['risk_status'];
