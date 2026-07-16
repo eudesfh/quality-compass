@@ -158,7 +158,7 @@ export default function RNCForm() {
     <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50 flex items-start justify-center pt-8 overflow-y-auto pb-8">
       <div className="bg-card rounded-lg shadow-lg w-full max-w-2xl animate-fade-in border">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold text-foreground">FG 10.1-01 REGISTRO DE NÃO CONFORMIDADE</h2>
+          <h2 className="text-lg font-semibold text-foreground">FG 10.1 - REGISTRO DE NÃO CONFORMIDADE</h2>
           <Button variant="ghost" size="icon" onClick={() => setShowRNCForm(false)}>
             <X className="h-4 w-4" />
           </Button>
