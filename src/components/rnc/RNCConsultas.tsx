@@ -121,6 +121,7 @@ export default function RNCConsultas() {
         title="Filtros — RNC"
         showDeadlineStatusFilter={true}
         deadlineStatusOptions={deadlineStatusOptions}
+        showCategoryFilter={true}
       />
       <div className="flex-1 p-6">
         <div className="flex items-center gap-3 mb-4">
