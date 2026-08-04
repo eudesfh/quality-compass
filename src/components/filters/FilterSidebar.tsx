@@ -50,7 +50,8 @@ export default function FilterSidebar({
       companyType: 'all', 
       sector: 'all', 
       status: 'all',
-      ...(showDeadlineStatusFilter ? { deadlineStatus: 'all' } : {})
+      ...(showDeadlineStatusFilter ? { deadlineStatus: 'all' } : {}),
+      ...(showCategoryFilter ? { occurrenceCategory: 'all' } : {})
     });
   };
 
@@ -61,7 +62,8 @@ export default function FilterSidebar({
     filters.companyType !== 'all' || 
     filters.sector !== 'all' || 
     filters.status !== 'all' ||
-    (showDeadlineStatusFilter && filters.deadlineStatus && filters.deadlineStatus !== 'all');
+    (showDeadlineStatusFilter && filters.deadlineStatus && filters.deadlineStatus !== 'all') ||
+    (showCategoryFilter && filters.occurrenceCategory && filters.occurrenceCategory !== 'all');
 
   return (
     <aside className="w-64 shrink-0 bg-card border-r min-h-[calc(100vh-7rem)] p-4 space-y-5">
