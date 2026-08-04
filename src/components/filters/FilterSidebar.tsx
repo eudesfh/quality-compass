@@ -76,6 +76,20 @@ export default function FilterSidebar({
         )}
       </div>
 
+      {showCategoryFilter && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Categoria</Label>
+          <Select value={filters.occurrenceCategory || 'all'} onValueChange={(v) => update('occurrenceCategory', v)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="rnc">RNC — Não Conformidade</SelectItem>
+              <SelectItem value="op">OP — Oportunidade de Melhoria</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Data Inicial</Label>
         <Input type="date" value={filters.dateFrom} onChange={(e) => update('dateFrom', e.target.value)} className="h-9 text-sm" />
