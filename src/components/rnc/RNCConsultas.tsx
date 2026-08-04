@@ -85,6 +85,11 @@ export default function RNCConsultas() {
 
   const filtered = rncs.filter((r) => {
     if (search && !r.subject.toLowerCase().includes(search.toLowerCase()) && !r.code.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filters.occurrenceCategory && filters.occurrenceCategory !== 'all') {
+      const isOP = r.code.startsWith('OP-');
+      if (filters.occurrenceCategory === 'op' && !isOP) return false;
+      if (filters.occurrenceCategory === 'rnc' && isOP) return false;
+    }
     if (filters.company !== 'all' && r.company_id !== filters.company) return false;
     if (filters.sector !== 'all' && r.sector_id !== filters.sector) return false;
     if (filters.status !== 'all' && r.status !== filters.status) return false;
@@ -116,6 +121,7 @@ export default function RNCConsultas() {
         title="Filtros — RNC"
         showDeadlineStatusFilter={true}
         deadlineStatusOptions={deadlineStatusOptions}
+        showCategoryFilter={true}
       />
       <div className="flex-1 p-6">
         <div className="flex items-center gap-3 mb-4">

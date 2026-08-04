@@ -12,6 +12,7 @@ export interface FilterValues {
   sector: string;
   status: string;
   deadlineStatus?: string; // Optional field for RNC deadline status
+  occurrenceCategory?: string; // Optional field: 'rnc' | 'op'
 }
 
 interface FilterSidebarProps {
@@ -23,6 +24,7 @@ interface FilterSidebarProps {
   title?: string;
   showDeadlineStatusFilter?: boolean;
   deadlineStatusOptions?: { value: string; label: string }[];
+  showCategoryFilter?: boolean;
 }
 
 export default function FilterSidebar({ 
@@ -33,7 +35,8 @@ export default function FilterSidebar({
   statusOptions, 
   title = 'Filtros',
   showDeadlineStatusFilter = false,
-  deadlineStatusOptions = []
+  deadlineStatusOptions = [],
+  showCategoryFilter = false
 }: FilterSidebarProps) {
   const update = (key: keyof FilterValues, value: string) => {
     onChange({ ...filters, [key]: value });
@@ -47,7 +50,8 @@ export default function FilterSidebar({
       companyType: 'all', 
       sector: 'all', 
       status: 'all',
-      ...(showDeadlineStatusFilter ? { deadlineStatus: 'all' } : {})
+      ...(showDeadlineStatusFilter ? { deadlineStatus: 'all' } : {}),
+      ...(showCategoryFilter ? { occurrenceCategory: 'all' } : {})
     });
   };
 
@@ -58,7 +62,8 @@ export default function FilterSidebar({
     filters.companyType !== 'all' || 
     filters.sector !== 'all' || 
     filters.status !== 'all' ||
-    (showDeadlineStatusFilter && filters.deadlineStatus && filters.deadlineStatus !== 'all');
+    (showDeadlineStatusFilter && filters.deadlineStatus && filters.deadlineStatus !== 'all') ||
+    (showCategoryFilter && filters.occurrenceCategory && filters.occurrenceCategory !== 'all');
 
   return (
     <aside className="w-64 shrink-0 bg-card border-r min-h-[calc(100vh-7rem)] p-4 space-y-5">
@@ -70,6 +75,20 @@ export default function FilterSidebar({
           </Button>
         )}
       </div>
+
+      {showCategoryFilter && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Categoria</Label>
+          <Select value={filters.occurrenceCategory || 'all'} onValueChange={(v) => update('occurrenceCategory', v)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="rnc">RNC — Não Conformidade</SelectItem>
+              <SelectItem value="op">OP — Oportunidade de Melhoria</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Data Inicial</Label>
