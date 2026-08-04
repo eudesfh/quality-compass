@@ -12,6 +12,7 @@ export interface FilterValues {
   sector: string;
   status: string;
   deadlineStatus?: string; // Optional field for RNC deadline status
+  occurrenceCategory?: string; // Optional field: 'rnc' | 'op'
 }
 
 interface FilterSidebarProps {
@@ -23,6 +24,7 @@ interface FilterSidebarProps {
   title?: string;
   showDeadlineStatusFilter?: boolean;
   deadlineStatusOptions?: { value: string; label: string }[];
+  showCategoryFilter?: boolean;
 }
 
 export default function FilterSidebar({ 
@@ -33,7 +35,8 @@ export default function FilterSidebar({
   statusOptions, 
   title = 'Filtros',
   showDeadlineStatusFilter = false,
-  deadlineStatusOptions = []
+  deadlineStatusOptions = [],
+  showCategoryFilter = false
 }: FilterSidebarProps) {
   const update = (key: keyof FilterValues, value: string) => {
     onChange({ ...filters, [key]: value });
