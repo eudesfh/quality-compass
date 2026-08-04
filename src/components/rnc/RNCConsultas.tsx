@@ -85,6 +85,11 @@ export default function RNCConsultas() {
 
   const filtered = rncs.filter((r) => {
     if (search && !r.subject.toLowerCase().includes(search.toLowerCase()) && !r.code.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filters.occurrenceCategory && filters.occurrenceCategory !== 'all') {
+      const isOP = r.code.startsWith('OP-');
+      if (filters.occurrenceCategory === 'op' && !isOP) return false;
+      if (filters.occurrenceCategory === 'rnc' && isOP) return false;
+    }
     if (filters.company !== 'all' && r.company_id !== filters.company) return false;
     if (filters.sector !== 'all' && r.sector_id !== filters.sector) return false;
     if (filters.status !== 'all' && r.status !== filters.status) return false;
