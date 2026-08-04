@@ -63,6 +63,7 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
     sector: 'all',
     status: 'all',
     deadlineStatus: 'all',
+    occurrenceCategory: 'all',
   });
   const [rncSearch, setRncSearch] = useState('');
 
