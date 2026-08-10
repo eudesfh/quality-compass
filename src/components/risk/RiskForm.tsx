@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import { computeRiskDeadline, riskDeadlineDays, formatDateBR } from '@/lib/utils';
 
 type RiskResponse = Database['public']['Enums']['risk_response'];
 type RiskFrequency = Database['public']['Enums']['risk_frequency'];
@@ -48,7 +49,6 @@ export default function RiskForm() {
   const [response, setResponse] = useState<RiskResponse | ''>('');
   const [frequency, setFrequency] = useState<RiskFrequency | ''>('');
   const [treatment, setTreatment] = useState('');
-  const [deadline, setDeadline] = useState('');
   const [status, setStatus] = useState<RiskStatus | ''>('');
   const [sectorId, setSectorId] = useState('');
   const [companyId, setCompanyId] = useState('');
@@ -71,6 +71,13 @@ export default function RiskForm() {
     if (riskLevel <= 5) return { label: 'Médio Risco', className: 'bg-risk-medium-light text-risk-medium' };
     return { label: 'Alto Risco', className: 'bg-risk-high-light text-risk-high' };
   }, [riskLevel]);
+
+  const todayISO = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+  const deadlineDays = riskDeadlineDays(riskLevel);
+  const deadline = riskLevel ? computeRiskDeadline(todayISO, riskLevel) : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,8 +212,9 @@ export default function RiskForm() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Prazo</Label>
-              <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              <Label>Prazo (automático)</Label>
+              <Input value={deadline ? `${formatDateBR(deadline)} (${deadlineDays} dias corridos)` : 'Selecione probabilidade e agravante'} readOnly className="bg-muted" />
+              <p className="text-xs text-muted-foreground">Alto risco: 30 dias · Médio: 60 dias · Baixo: 90 dias, a contar da abertura.</p>
             </div>
             <div className="space-y-2">
               <Label>Status *</Label>
