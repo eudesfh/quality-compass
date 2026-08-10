@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
 import FilterSidebar, { FilterValues } from '@/components/filters/FilterSidebar';
 import { formatDateBR } from '@/lib/utils';
+import { ORIGINS } from '@/components/rnc/RNCForm';
 
 type RNCStatus = Database['public']['Enums']['rnc_status'];
 type CritLevel = Database['public']['Enums']['criticality_level'];
@@ -81,6 +82,8 @@ export default function RNCConsultas() {
     },
   });
 
+  const originOptions = Array.from(new Set([...ORIGINS, ...rncs.map((r: any) => r.origin).filter(Boolean)]));
+
   const getProfileName = (userId: string) => profiles.find(p => p.user_id === userId)?.full_name || '';
 
   const filtered = rncs.filter((r) => {
@@ -90,6 +93,7 @@ export default function RNCConsultas() {
       if (filters.occurrenceCategory === 'op' && !isOP) return false;
       if (filters.occurrenceCategory === 'rnc' && isOP) return false;
     }
+    if (filters.origin && filters.origin !== 'all' && r.origin !== filters.origin) return false;
     if (filters.company !== 'all' && r.company_id !== filters.company) return false;
     if (filters.sector !== 'all' && r.sector_id !== filters.sector) return false;
     if (filters.status !== 'all' && r.status !== filters.status) return false;
@@ -122,6 +126,8 @@ export default function RNCConsultas() {
         showDeadlineStatusFilter={true}
         deadlineStatusOptions={deadlineStatusOptions}
         showCategoryFilter={true}
+        showOriginFilter={true}
+        originOptions={originOptions}
       />
       <div className="flex-1 p-6">
         <div className="flex items-center gap-3 mb-4">
