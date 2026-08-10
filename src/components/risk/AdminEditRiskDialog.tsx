@@ -160,7 +160,7 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Prazo</Label>
+            <Label>Prazo (automático)</Label>
             <Input value={`${formatDateBR(deadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
           </div>
           <div className="space-y-1">
