@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export default function RNCDashboard() {
   const { isAdmin } = useAuth();
   const [selectedSector, setSelectedSector] = useState<string>('all');
+  const [selectedOrigin, setSelectedOrigin] = useState<string>('all');
 
   const { data: rncs = [] } = useQuery({
     queryKey: ['rnc-list', 'all'],
@@ -29,8 +30,11 @@ export default function RNCDashboard() {
   // Filter RNCs based on the selected sector
   const filteredRncs = rncs.filter((r) => {
     if (selectedSector !== 'all' && r.sector_id !== selectedSector) return false;
+    if (selectedOrigin !== 'all' && r.origin !== selectedOrigin) return false;
     return true;
   });
+
+  const originList = Array.from(new Set(rncs.map((r: any) => r.origin).filter(Boolean))).sort();
 
   const total = filteredRncs.length;
   const pending = filteredRncs.filter(r => !['concluida', 'recusada'].includes(r.status)).length;
@@ -96,6 +100,18 @@ export default function RNCDashboard() {
                 <SelectItem value="all">Todos os Setores</SelectItem>
                 {sectors.map((s: any) => (
                   <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Origem:</span>
+            <Select value={selectedOrigin} onValueChange={setSelectedOrigin}>
+              <SelectTrigger className="w-[190px] h-9 border-muted bg-background hover:bg-accent transition-colors">
+                <SelectValue placeholder="Todas as Origens" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Origens</SelectItem>
+                {originList.map((o: any) => (
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

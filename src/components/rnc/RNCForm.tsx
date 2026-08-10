@@ -15,7 +15,7 @@ import type { Database } from '@/integrations/supabase/types';
 type OccurrenceType = Database['public']['Enums']['occurrence_type'];
 type CompanyType = Database['public']['Enums']['company_type'];
 
-const ORIGINS = [
+export const ORIGINS = [
   'Auditoria Interna', 'Processos', 'Produto',
   'Reclamação do Cliente', 'Indicadores', 'Acidente de Trabalho (CAT)',
   'Gestão de Riscos', 'Oportunidade de Melhoria'

@@ -13,6 +13,7 @@ export interface FilterValues {
   status: string;
   deadlineStatus?: string; // Optional field for RNC deadline status
   occurrenceCategory?: string; // Optional field: 'rnc' | 'op'
+  origin?: string; // Optional field: occurrence origin
 }
 
 interface FilterSidebarProps {
@@ -25,6 +26,8 @@ interface FilterSidebarProps {
   showDeadlineStatusFilter?: boolean;
   deadlineStatusOptions?: { value: string; label: string }[];
   showCategoryFilter?: boolean;
+  showOriginFilter?: boolean;
+  originOptions?: string[];
 }
 
 export default function FilterSidebar({ 
@@ -36,7 +39,9 @@ export default function FilterSidebar({
   title = 'Filtros',
   showDeadlineStatusFilter = false,
   deadlineStatusOptions = [],
-  showCategoryFilter = false
+  showCategoryFilter = false,
+  showOriginFilter = false,
+  originOptions = []
 }: FilterSidebarProps) {
   const update = (key: keyof FilterValues, value: string) => {
     onChange({ ...filters, [key]: value });
@@ -51,7 +56,8 @@ export default function FilterSidebar({
       sector: 'all', 
       status: 'all',
       ...(showDeadlineStatusFilter ? { deadlineStatus: 'all' } : {}),
-      ...(showCategoryFilter ? { occurrenceCategory: 'all' } : {})
+      ...(showCategoryFilter ? { occurrenceCategory: 'all' } : {}),
+      ...(showOriginFilter ? { origin: 'all' } : {})
     });
   };
 
@@ -63,7 +69,8 @@ export default function FilterSidebar({
     filters.sector !== 'all' || 
     filters.status !== 'all' ||
     (showDeadlineStatusFilter && filters.deadlineStatus && filters.deadlineStatus !== 'all') ||
-    (showCategoryFilter && filters.occurrenceCategory && filters.occurrenceCategory !== 'all');
+    (showCategoryFilter && filters.occurrenceCategory && filters.occurrenceCategory !== 'all') ||
+    (showOriginFilter && filters.origin && filters.origin !== 'all');
 
   return (
     <aside className="w-64 shrink-0 bg-card border-r min-h-[calc(100vh-7rem)] p-4 space-y-5">
@@ -133,6 +140,19 @@ export default function FilterSidebar({
           </SelectContent>
         </Select>
       </div>
+
+      {showOriginFilter && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Origem</Label>
+          <Select value={filters.origin || 'all'} onValueChange={(v) => update('origin', v)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {originOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Status</Label>

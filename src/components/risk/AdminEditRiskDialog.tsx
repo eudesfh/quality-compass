@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { computeRiskDeadline, riskDeadlineDays, formatDateBR } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -35,12 +36,15 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
   const [response, setResponse] = useState(risk.response || 'aceitar');
   const [frequency, setFrequency] = useState(risk.frequency || '');
   const [treatment, setTreatment] = useState(risk.treatment || '');
-  const [deadline, setDeadline] = useState(risk.deadline || '');
   const [status, setStatus] = useState(risk.status || 'iniciar');
   const [companyId, setCompanyId] = useState(risk.company_id || '');
   const [companyType, setCompanyType] = useState(risk.company_type || '');
   const [sectorId, setSectorId] = useState(risk.sector_id || '');
   const [loading, setLoading] = useState(false);
+
+  const riskLevel = probability * severity;
+  const deadlineDays = riskDeadlineDays(riskLevel);
+  const deadline = computeRiskDeadline(risk.created_at || new Date(), riskLevel);
 
   const handleSave = async () => {
     setLoading(true);
@@ -156,8 +160,8 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Prazo</Label>
-            <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            <Label>Prazo (automático)</Label>
+            <Input value={`${formatDateBR(deadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
           </div>
           <div className="space-y-1">
             <Label>Empresa</Label>

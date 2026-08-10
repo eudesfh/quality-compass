@@ -422,11 +422,8 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
               <p className="text-sm text-muted-foreground py-2">⏳ Aguardando análise de eficácia do setor de Processos.</p>
             )
           )}
-          {stage.stage_number === 3 && !isActive && efficacy && (
-            <div className="text-sm mt-2">
-              <p><strong>Resultado:</strong> {efficacy.is_effective ? '✅ Eficaz' : '❌ Ineficaz'}</p>
-              {efficacy.evidence && <p className="text-muted-foreground mt-1">{efficacy.evidence}</p>}
-            </div>
+          {stage.stage_number === 3 && efficacy?.evaluation_date && !(isActive && canValidate) && (
+            <EfficacyResult efficacy={efficacy} />
           )}
         </>
       ) : (
@@ -489,11 +486,8 @@ function StageContent({ stageNumber, stages, rnc, causeAnalysis, actions, effica
               <p className="text-sm text-muted-foreground py-2">⏳ Aguardando análise de eficácia do setor de Processos.</p>
             )
           )}
-          {stage.stage_number === 5 && !isActive && efficacy && (
-            <div className="text-sm mt-2">
-              <p><strong>Resultado:</strong> {efficacy.is_effective ? '✅ Eficaz' : '❌ Ineficaz'}</p>
-              {efficacy.evidence && <p className="text-muted-foreground mt-1">{efficacy.evidence}</p>}
-            </div>
+          {stage.stage_number === 5 && efficacy?.evaluation_date && !(isActive && canValidate) && (
+            <EfficacyResult efficacy={efficacy} />
           )}
         </>
       )}
@@ -1349,6 +1343,26 @@ function ImplementationForm({ actions, user, isAdmin, isProcessos, queryClient, 
 }
 
 /* ======================== EFFICACY ======================== */
+function EfficacyResult({ efficacy }: any) {
+  if (!efficacy) return null;
+  return (
+    <div className={`text-sm mt-2 rounded p-3 border ${efficacy.is_effective ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-destructive/5 border-destructive/20'}`}>
+      <p><strong>Resultado:</strong> {efficacy.is_effective ? '✅ Eficaz' : '❌ Ineficaz'}</p>
+      {efficacy.evidence && (
+        <p className="mt-1"><strong>{efficacy.is_effective ? 'Evidência:' : 'Justificativa / Motivo:'}</strong> <span className="text-muted-foreground">{efficacy.evidence}</span></p>
+      )}
+      {efficacy.evaluation_date && (
+        <p className="text-xs text-muted-foreground mt-1">Avaliado em {formatDateBR(efficacy.evaluation_date)}</p>
+      )}
+      {efficacy.evidence_file_path && (
+        <SignedFileLink path={efficacy.evidence_file_path} className="text-xs text-primary hover:underline flex items-center gap-1 w-fit mt-1">
+          <Paperclip className="h-3 w-3" /> Baixar anexo
+        </SignedFileLink>
+      )}
+    </div>
+  );
+}
+
 function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
   const [isEffective, setIsEffective] = useState<boolean | null>(existing?.is_effective ?? null);
   const [evidence, setEvidence] = useState(existing?.evidence || '');
@@ -1357,6 +1371,7 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
 
   const handleSave = async () => {
     if (isEffective === null) { toast.error('Selecione eficaz ou ineficaz'); return; }
+    if (!evidence.trim()) { toast.error(isEffective ? 'Descreva a evidência.' : 'Descreva a justificativa da ineficácia.'); return; }
     setLoading(true);
     try {
       let filePath = existing?.evidence_file_path || null;
@@ -1377,7 +1392,7 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
         toast.success('RNC concluída com eficácia!');
       } else {
-        await supabase.from('rnc_stages').update({ status: 'reprovado' }).eq('id', stageId);
+        await supabase.from('rnc_stages').update({ status: 'reprovado', rejection_reason: evidence }).eq('id', stageId);
         const { data: implStage } = await supabase.from('rnc_stages').select('id').eq('rnc_id', rncId).eq('stage_name', 'Implementação').maybeSingle();
         if (implStage) await supabase.from('rnc_stages').update({ status: 'em_andamento', completed_at: null }).eq('id', implStage.id);
         await supabase.from('rnc_occurrences').update({ status: 'implementacao' }).eq('id', rncId);
@@ -1403,8 +1418,8 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         </label>
       </div>
       <div className="space-y-1">
-        <Label>Evidência *</Label>
-        <Textarea value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="Descreva a evidência..." />
+        <Label>{isEffective === false ? 'Justificativa / Motivo da ineficácia *' : 'Evidência *'}</Label>
+        <Textarea value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder={isEffective === false ? 'Descreva o motivo pelo qual não foi eficaz...' : 'Descreva a evidência...'} />
       </div>
       <div className="space-y-1">
         <Label>Anexo</Label>
