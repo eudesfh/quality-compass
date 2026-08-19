@@ -53,6 +53,7 @@ export default function RiskForm() {
   const [sectorId, setSectorId] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [companyType, setCompanyType] = useState('');
+  const [riskType, setRiskType] = useState<'com_prazo' | 'continuo'>('com_prazo');
   const [loading, setLoading] = useState(false);
 
   const { data: companies = [] } = useQuery({
