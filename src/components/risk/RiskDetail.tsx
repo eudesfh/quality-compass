@@ -215,7 +215,7 @@ export default function RiskDetail() {
             </div>
             <div className="space-y-2">
               <Label>Prazo (automático)</Label>
-              <Input value={`${formatDateBR(autoDeadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
+              <Input value={isContinuous ? 'Contínuo — sem prazo determinado' : `${formatDateBR(autoDeadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
               <p className="text-xs text-muted-foreground">Alto risco: 30 dias · Médio: 60 dias · Baixo: 90 dias, a contar da abertura.</p>
             </div>
           </div>
