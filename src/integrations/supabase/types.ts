@@ -228,10 +228,12 @@ export type Database = {
           deadline: string | null
           frequency: Database["public"]["Enums"]["risk_frequency"] | null
           id: string
+          opened_at: string | null
           probability: number
           response: Database["public"]["Enums"]["risk_response"]
           risk_description: string
           risk_level: number | null
+          risk_type: string
           sector_id: string | null
           severity: number
           status: Database["public"]["Enums"]["risk_status"]
@@ -250,10 +252,12 @@ export type Database = {
           deadline?: string | null
           frequency?: Database["public"]["Enums"]["risk_frequency"] | null
           id?: string
+          opened_at?: string | null
           probability: number
           response: Database["public"]["Enums"]["risk_response"]
           risk_description: string
           risk_level?: number | null
+          risk_type?: string
           sector_id?: string | null
           severity: number
           status?: Database["public"]["Enums"]["risk_status"]
@@ -272,10 +276,12 @@ export type Database = {
           deadline?: string | null
           frequency?: Database["public"]["Enums"]["risk_frequency"] | null
           id?: string
+          opened_at?: string | null
           probability?: number
           response?: Database["public"]["Enums"]["risk_response"]
           risk_description?: string
           risk_level?: number | null
+          risk_type?: string
           sector_id?: string | null
           severity?: number
           status?: Database["public"]["Enums"]["risk_status"]
