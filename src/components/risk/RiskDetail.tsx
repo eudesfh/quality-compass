@@ -185,8 +185,13 @@ export default function RiskDetail() {
           {(risk as any).companies?.name && <div><span className="text-muted-foreground">Empresa:</span> <span className="font-medium">{(risk as any).companies.name}</span></div>}
           {risk.company_type && <div><span className="text-muted-foreground">Tipo:</span> <span className="font-medium capitalize">{risk.company_type}</span></div>}
           {(risk as any).sectors?.name && <div><span className="text-muted-foreground">Setor:</span> <span className="font-medium">{(risk as any).sectors.name}</span></div>}
-          <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">{formatDateBR(risk.deadline || autoDeadline)}</span> <span className="text-muted-foreground">({deadlineDays} dias corridos)</span></div>
-          <div><span className="text-muted-foreground">Criado em:</span> <span className="font-medium">{formatDateBR(risk.created_at)}</span></div>
+          <div><span className="text-muted-foreground">Tipo de Risco:</span> <span className="font-medium">{isContinuous ? 'Contínuo (sem prazo)' : 'Com prazo'}</span></div>
+          {isContinuous ? (
+            <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">Contínuo — sem prazo determinado</span></div>
+          ) : (
+            <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">{formatDateBR(risk.deadline || autoDeadline)}</span> <span className="text-muted-foreground">({deadlineDays} dias corridos)</span></div>
+          )}
+          <div><span className="text-muted-foreground">Criado em:</span> <span className="font-medium">{formatDateBR(openedAt)}</span></div>
         </div>
 
         {risk.treatment && !editing && (
