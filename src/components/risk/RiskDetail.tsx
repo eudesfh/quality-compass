@@ -82,7 +82,9 @@ export default function RiskDetail() {
       await supabase.from('risks').update({
         status: editStatus as any,
         treatment: editTreatment || null,
-        deadline: computeRiskDeadline(risk.created_at, risk.risk_level || (risk.probability * risk.severity)),
+        deadline: (risk as any).risk_type === 'continuo'
+          ? null
+          : computeRiskDeadline((risk as any).opened_at || risk.created_at, risk.risk_level || (risk.probability * risk.severity)),
       }).eq('id', risk.id);
       queryClient.invalidateQueries({ queryKey: ['risk-detail'] });
       queryClient.invalidateQueries({ queryKey: ['risk-list'] });
