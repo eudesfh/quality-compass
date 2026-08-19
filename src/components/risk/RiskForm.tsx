@@ -77,8 +77,9 @@ export default function RiskForm() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }, []);
+  const [openedAt, setOpenedAt] = useState(todayISO);
   const deadlineDays = riskDeadlineDays(riskLevel);
-  const deadline = riskLevel ? computeRiskDeadline(todayISO, riskLevel) : '';
+  const deadline = riskType === 'continuo' || !riskLevel ? '' : computeRiskDeadline(openedAt || todayISO, riskLevel);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
