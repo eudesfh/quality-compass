@@ -98,7 +98,10 @@ export default function RiskForm() {
         status: status as any, sector_id: sectorId || null, company_id: companyId || null,
         company_type: (companyType || null) as any,
         created_by: user.id,
-      });
+        risk_type: riskType,
+        opened_at: openedAt || todayISO,
+        created_at: `${openedAt || todayISO}T12:00:00`,
+      } as any);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['risk-list'] });
       toast.success('Risco cadastrado com sucesso!');
