@@ -40,11 +40,14 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
   const [companyId, setCompanyId] = useState(risk.company_id || '');
   const [companyType, setCompanyType] = useState(risk.company_type || '');
   const [sectorId, setSectorId] = useState(risk.sector_id || '');
+  const [riskType, setRiskType] = useState<'com_prazo' | 'continuo'>(risk.risk_type === 'continuo' ? 'continuo' : 'com_prazo');
   const [loading, setLoading] = useState(false);
 
   const riskLevel = probability * severity;
   const deadlineDays = riskDeadlineDays(riskLevel);
-  const deadline = computeRiskDeadline(risk.created_at || new Date(), riskLevel);
+  const deadline = riskType === 'continuo'
+    ? ''
+    : computeRiskDeadline(risk.opened_at || risk.created_at || new Date(), riskLevel);
 
   const handleSave = async () => {
     setLoading(true);
