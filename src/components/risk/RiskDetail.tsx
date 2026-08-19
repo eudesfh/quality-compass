@@ -82,7 +82,9 @@ export default function RiskDetail() {
       await supabase.from('risks').update({
         status: editStatus as any,
         treatment: editTreatment || null,
-        deadline: computeRiskDeadline(risk.created_at, risk.risk_level || (risk.probability * risk.severity)),
+        deadline: (risk as any).risk_type === 'continuo'
+          ? null
+          : computeRiskDeadline((risk as any).opened_at || risk.created_at, risk.risk_level || (risk.probability * risk.severity)),
       }).eq('id', risk.id);
       queryClient.invalidateQueries({ queryKey: ['risk-detail'] });
       queryClient.invalidateQueries({ queryKey: ['risk-list'] });
@@ -130,7 +132,9 @@ export default function RiskDetail() {
   const level = risk.risk_level || (risk.probability * risk.severity);
   const cls = getRiskClass(level);
   const deadlineDays = riskDeadlineDays(level);
-  const autoDeadline = computeRiskDeadline(risk.created_at, level);
+  const openedAt = (risk as any).opened_at || risk.created_at;
+  const isContinuous = (risk as any).risk_type === 'continuo';
+  const autoDeadline = computeRiskDeadline(openedAt, level);
 
   return (
     <div className="p-6 animate-fade-in max-w-4xl mx-auto">
@@ -181,8 +185,13 @@ export default function RiskDetail() {
           {(risk as any).companies?.name && <div><span className="text-muted-foreground">Empresa:</span> <span className="font-medium">{(risk as any).companies.name}</span></div>}
           {risk.company_type && <div><span className="text-muted-foreground">Tipo:</span> <span className="font-medium capitalize">{risk.company_type}</span></div>}
           {(risk as any).sectors?.name && <div><span className="text-muted-foreground">Setor:</span> <span className="font-medium">{(risk as any).sectors.name}</span></div>}
-          <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">{formatDateBR(risk.deadline || autoDeadline)}</span> <span className="text-muted-foreground">({deadlineDays} dias corridos)</span></div>
-          <div><span className="text-muted-foreground">Criado em:</span> <span className="font-medium">{formatDateBR(risk.created_at)}</span></div>
+          <div><span className="text-muted-foreground">Tipo de Risco:</span> <span className="font-medium">{isContinuous ? 'Contínuo (sem prazo)' : 'Com prazo'}</span></div>
+          {isContinuous ? (
+            <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">Contínuo — sem prazo determinado</span></div>
+          ) : (
+            <div><span className="text-muted-foreground">Prazo:</span> <span className="font-medium">{formatDateBR(risk.deadline || autoDeadline)}</span> <span className="text-muted-foreground">({deadlineDays} dias corridos)</span></div>
+          )}
+          <div><span className="text-muted-foreground">Criado em:</span> <span className="font-medium">{formatDateBR(openedAt)}</span></div>
         </div>
 
         {risk.treatment && !editing && (
@@ -206,7 +215,7 @@ export default function RiskDetail() {
             </div>
             <div className="space-y-2">
               <Label>Prazo (automático)</Label>
-              <Input value={`${formatDateBR(autoDeadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
+              <Input value={isContinuous ? 'Contínuo — sem prazo determinado' : `${formatDateBR(autoDeadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
               <p className="text-xs text-muted-foreground">Alto risco: 30 dias · Médio: 60 dias · Baixo: 90 dias, a contar da abertura.</p>
             </div>
           </div>

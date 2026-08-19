@@ -53,6 +53,7 @@ export default function RiskForm() {
   const [sectorId, setSectorId] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [companyType, setCompanyType] = useState('');
+  const [riskType, setRiskType] = useState<'com_prazo' | 'continuo'>('com_prazo');
   const [loading, setLoading] = useState(false);
 
   const { data: companies = [] } = useQuery({
@@ -76,8 +77,9 @@ export default function RiskForm() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }, []);
+  const [openedAt, setOpenedAt] = useState(todayISO);
   const deadlineDays = riskDeadlineDays(riskLevel);
-  const deadline = riskLevel ? computeRiskDeadline(todayISO, riskLevel) : '';
+  const deadline = riskType === 'continuo' || !riskLevel ? '' : computeRiskDeadline(openedAt || todayISO, riskLevel);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +98,10 @@ export default function RiskForm() {
         status: status as any, sector_id: sectorId || null, company_id: companyId || null,
         company_type: (companyType || null) as any,
         created_by: user.id,
-      });
+        risk_type: riskType,
+        opened_at: openedAt || todayISO,
+        created_at: `${openedAt || todayISO}T12:00:00`,
+      } as any);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['risk-list'] });
       toast.success('Risco cadastrado com sucesso!');
@@ -212,8 +217,29 @@ export default function RiskForm() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label>Tipo de Risco *</Label>
+              <Select value={riskType} onValueChange={(v) => setRiskType(v as 'com_prazo' | 'continuo')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="com_prazo">Com prazo</SelectItem>
+                  <SelectItem value="continuo">Contínuo (sem prazo)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Abertura *</Label>
+              <Input type="date" value={openedAt} onChange={(e) => setOpenedAt(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Pode ser retroativa. Após o cadastro, não poderá ser alterada.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Prazo (automático)</Label>
-              <Input value={deadline ? `${formatDateBR(deadline)} (${deadlineDays} dias corridos)` : 'Selecione probabilidade e agravante'} readOnly className="bg-muted" />
+              <Input
+                value={riskType === 'continuo'
+                  ? 'Contínuo — sem prazo determinado'
+                  : (deadline ? `${formatDateBR(deadline)} (${deadlineDays} dias corridos)` : 'Selecione probabilidade e agravante')}
+                readOnly className="bg-muted" />
               <p className="text-xs text-muted-foreground">Alto risco: 30 dias · Médio: 60 dias · Baixo: 90 dias, a contar da abertura.</p>
             </div>
             <div className="space-y-2">

@@ -40,11 +40,14 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
   const [companyId, setCompanyId] = useState(risk.company_id || '');
   const [companyType, setCompanyType] = useState(risk.company_type || '');
   const [sectorId, setSectorId] = useState(risk.sector_id || '');
+  const [riskType, setRiskType] = useState<'com_prazo' | 'continuo'>(risk.risk_type === 'continuo' ? 'continuo' : 'com_prazo');
   const [loading, setLoading] = useState(false);
 
   const riskLevel = probability * severity;
   const deadlineDays = riskDeadlineDays(riskLevel);
-  const deadline = computeRiskDeadline(risk.created_at || new Date(), riskLevel);
+  const deadline = riskType === 'continuo'
+    ? ''
+    : computeRiskDeadline(risk.opened_at || risk.created_at || new Date(), riskLevel);
 
   const handleSave = async () => {
     setLoading(true);
@@ -58,12 +61,13 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
         response: response as any,
         frequency: (frequency || null) as any,
         treatment: treatment || null,
-        deadline: deadline || null,
+        deadline: riskType === 'continuo' ? null : (deadline || null),
+        risk_type: riskType,
         status: status as any,
         company_id: companyId || null,
         company_type: (companyType || null) as any,
         sector_id: sectorId || null,
-      }).eq('id', risk.id);
+      } as any).eq('id', risk.id);
       if (error) throw error;
       toast.success('Risco atualizado com sucesso');
       queryClient.invalidateQueries({ queryKey: ['risk-detail'] });
@@ -160,8 +164,25 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
             </Select>
           </div>
           <div className="space-y-1">
+            <Label>Tipo de Risco</Label>
+            <Select value={riskType} onValueChange={(v) => setRiskType(v as 'com_prazo' | 'continuo')}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="com_prazo">Com prazo</SelectItem>
+                <SelectItem value="continuo">Contínuo (sem prazo)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <Label>Prazo (automático)</Label>
-            <Input value={`${formatDateBR(deadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
+            <Input
+              value={riskType === 'continuo' ? 'Contínuo — sem prazo determinado' : `${formatDateBR(deadline)} (${deadlineDays} dias corridos)`}
+              readOnly className="bg-muted" />
+          </div>
+          <div className="space-y-1">
+            <Label>Data de abertura</Label>
+            <Input value={formatDateBR(risk.opened_at || risk.created_at)} readOnly className="bg-muted" />
+            <p className="text-xs text-muted-foreground">A data de abertura não pode ser alterada após o cadastro.</p>
           </div>
           <div className="space-y-1">
             <Label>Empresa</Label>
