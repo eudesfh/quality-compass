@@ -164,8 +164,25 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
             </Select>
           </div>
           <div className="space-y-1">
+            <Label>Tipo de Risco</Label>
+            <Select value={riskType} onValueChange={(v) => setRiskType(v as 'com_prazo' | 'continuo')}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="com_prazo">Com prazo</SelectItem>
+                <SelectItem value="continuo">Contínuo (sem prazo)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <Label>Prazo (automático)</Label>
-            <Input value={`${formatDateBR(deadline)} (${deadlineDays} dias corridos)`} readOnly className="bg-muted" />
+            <Input
+              value={riskType === 'continuo' ? 'Contínuo — sem prazo determinado' : `${formatDateBR(deadline)} (${deadlineDays} dias corridos)`}
+              readOnly className="bg-muted" />
+          </div>
+          <div className="space-y-1">
+            <Label>Data de abertura</Label>
+            <Input value={formatDateBR(risk.opened_at || risk.created_at)} readOnly className="bg-muted" />
+            <p className="text-xs text-muted-foreground">A data de abertura não pode ser alterada após o cadastro.</p>
           </div>
           <div className="space-y-1">
             <Label>Empresa</Label>
