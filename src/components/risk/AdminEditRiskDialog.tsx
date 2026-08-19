@@ -67,7 +67,7 @@ export default function AdminEditRiskDialog({ open, onOpenChange, risk, queryCli
         company_id: companyId || null,
         company_type: (companyType || null) as any,
         sector_id: sectorId || null,
-      }).eq('id', risk.id);
+      } as any).eq('id', risk.id);
       if (error) throw error;
       toast.success('Risco atualizado com sucesso');
       queryClient.invalidateQueries({ queryKey: ['risk-detail'] });
