@@ -132,7 +132,9 @@ export default function RiskDetail() {
   const level = risk.risk_level || (risk.probability * risk.severity);
   const cls = getRiskClass(level);
   const deadlineDays = riskDeadlineDays(level);
-  const autoDeadline = computeRiskDeadline(risk.created_at, level);
+  const openedAt = (risk as any).opened_at || risk.created_at;
+  const isContinuous = (risk as any).risk_type === 'continuo';
+  const autoDeadline = computeRiskDeadline(openedAt, level);
 
   return (
     <div className="p-6 animate-fade-in max-w-4xl mx-auto">
