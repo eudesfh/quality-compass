@@ -217,8 +217,29 @@ export default function RiskForm() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label>Tipo de Risco *</Label>
+              <Select value={riskType} onValueChange={(v) => setRiskType(v as 'com_prazo' | 'continuo')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="com_prazo">Com prazo</SelectItem>
+                  <SelectItem value="continuo">Contínuo (sem prazo)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Abertura *</Label>
+              <Input type="date" value={openedAt} onChange={(e) => setOpenedAt(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Pode ser retroativa. Após o cadastro, não poderá ser alterada.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Prazo (automático)</Label>
-              <Input value={deadline ? `${formatDateBR(deadline)} (${deadlineDays} dias corridos)` : 'Selecione probabilidade e agravante'} readOnly className="bg-muted" />
+              <Input
+                value={riskType === 'continuo'
+                  ? 'Contínuo — sem prazo determinado'
+                  : (deadline ? `${formatDateBR(deadline)} (${deadlineDays} dias corridos)` : 'Selecione probabilidade e agravante')}
+                readOnly className="bg-muted" />
               <p className="text-xs text-muted-foreground">Alto risco: 30 dias · Médio: 60 dias · Baixo: 90 dias, a contar da abertura.</p>
             </div>
             <div className="space-y-2">
