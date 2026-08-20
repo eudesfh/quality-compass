@@ -1367,11 +1367,13 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
   const [isEffective, setIsEffective] = useState<boolean | null>(existing?.is_effective ?? null);
   const [evidence, setEvidence] = useState(existing?.evidence || '');
   const [file, setFile] = useState<File | null>(null);
+  const [evaluationDate, setEvaluationDate] = useState<string>(existing?.evaluation_date || new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
     if (isEffective === null) { toast.error('Selecione eficaz ou ineficaz'); return; }
     if (!evidence.trim()) { toast.error(isEffective ? 'Descreva a evidência.' : 'Descreva a justificativa da ineficácia.'); return; }
+    if (!evaluationDate) { toast.error('Informe a data da análise de eficácia.'); return; }
     setLoading(true);
     try {
       let filePath = existing?.evidence_file_path || null;
@@ -1384,7 +1386,7 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
       if (existing) {
         await supabase.from('rnc_efficacy').update({
           is_effective: isEffective, evidence, evaluated_by: user.id,
-          evaluation_date: new Date().toISOString().split('T')[0], evidence_file_path: filePath,
+          evaluation_date: evaluationDate, evidence_file_path: filePath,
         }).eq('id', existing.id);
       }
       if (isEffective) {
@@ -1420,6 +1422,10 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
       <div className="space-y-1">
         <Label>{isEffective === false ? 'Justificativa / Motivo da ineficácia *' : 'Evidência *'}</Label>
         <Textarea value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder={isEffective === false ? 'Descreva o motivo pelo qual não foi eficaz...' : 'Descreva a evidência...'} />
+      </div>
+      <div className="space-y-1">
+        <Label>Data da análise de eficácia *</Label>
+        <Input type="date" value={evaluationDate} onChange={(e) => setEvaluationDate(e.target.value)} className="h-9 w-full max-w-[220px]" />
       </div>
       <div className="space-y-1">
         <Label>Anexo</Label>
