@@ -1367,11 +1367,13 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
   const [isEffective, setIsEffective] = useState<boolean | null>(existing?.is_effective ?? null);
   const [evidence, setEvidence] = useState(existing?.evidence || '');
   const [file, setFile] = useState<File | null>(null);
+  const [evaluationDate, setEvaluationDate] = useState<string>(existing?.evaluation_date || new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
     if (isEffective === null) { toast.error('Selecione eficaz ou ineficaz'); return; }
     if (!evidence.trim()) { toast.error(isEffective ? 'Descreva a evidência.' : 'Descreva a justificativa da ineficácia.'); return; }
+    if (!evaluationDate) { toast.error('Informe a data da análise de eficácia.'); return; }
     setLoading(true);
     try {
       let filePath = existing?.evidence_file_path || null;
