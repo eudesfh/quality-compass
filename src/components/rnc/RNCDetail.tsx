@@ -1386,7 +1386,7 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
       if (existing) {
         await supabase.from('rnc_efficacy').update({
           is_effective: isEffective, evidence, evaluated_by: user.id,
-          evaluation_date: new Date().toISOString().split('T')[0], evidence_file_path: filePath,
+          evaluation_date: evaluationDate, evidence_file_path: filePath,
         }).eq('id', existing.id);
       }
       if (isEffective) {
