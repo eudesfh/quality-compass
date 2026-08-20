@@ -1424,6 +1424,10 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         <Textarea value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder={isEffective === false ? 'Descreva o motivo pelo qual não foi eficaz...' : 'Descreva a evidência...'} />
       </div>
       <div className="space-y-1">
+        <Label>Data da análise de eficácia *</Label>
+        <Input type="date" value={evaluationDate} onChange={(e) => setEvaluationDate(e.target.value)} className="h-9 w-full max-w-[220px]" />
+      </div>
+      <div className="space-y-1">
         <Label>Anexo</Label>
         <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="h-9" />
         {existing?.evidence_file_path && (
