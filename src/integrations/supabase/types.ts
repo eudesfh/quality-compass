@@ -762,6 +762,8 @@ export type Database = {
         Args: { _rnc_id: string }
         Returns: undefined
       }
+      user_company_id: { Args: { _user_id: string }; Returns: string }
+      user_sector_id: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
