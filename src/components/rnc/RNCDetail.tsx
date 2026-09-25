@@ -119,7 +119,14 @@ export default function RNCDetail() {
   const { data: efficacy } = useQuery({
     queryKey: ['rnc-efficacy', selectedRNCId],
     queryFn: async () => {
-      const { data } = await supabase.from('rnc_efficacy').select('*').eq('rnc_id', selectedRNCId!).maybeSingle();
+      const { data, error } = await supabase
+        .from('rnc_efficacy')
+        .select('*')
+        .eq('rnc_id', selectedRNCId!)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!selectedRNCId,
@@ -1271,14 +1278,30 @@ function ImplementationForm({ actions, user, isAdmin, isProcessos, queryClient, 
   const handleFinishStage = async () => {
     setLoading(true);
     try {
-      await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
+      const { error: finishError } = await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
+      if (finishError) throw finishError;
       const nextStageNumber = isOportunidade ? 3 : 5;
-      const { data: nextStage } = await supabase.from('rnc_stages').select('id, responsible_sector_id').eq('rnc_id', rncId).eq('stage_number', nextStageNumber).single();
+      const { data: nextStage, error: nextStageError } = await supabase.from('rnc_stages').select('id, responsible_sector_id').eq('rnc_id', rncId).eq('stage_number', nextStageNumber).maybeSingle();
+      if (nextStageError) throw nextStageError;
+      if (!nextStage) throw new Error('A etapa de Análise de Eficácia não está configurada para esta ocorrência.');
       if (nextStage) {
-        await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
+        const { error: activateError } = await supabase.from('rnc_stages').update({ status: 'em_andamento' }).eq('id', nextStage.id);
+        if (activateError) throw activateError;
       }
-      await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
-      await supabase.from('rnc_efficacy').insert({ rnc_id: rncId });
+      const { error: statusError } = await supabase.from('rnc_occurrences').update({ status: 'eficacia' }).eq('id', rncId);
+      if (statusError) throw statusError;
+      const { data: existingEfficacy, error: efficacyLookupError } = await supabase
+        .from('rnc_efficacy')
+        .select('id')
+        .eq('rnc_id', rncId)
+        .is('is_effective', null)
+        .limit(1)
+        .maybeSingle();
+      if (efficacyLookupError) throw efficacyLookupError;
+      if (!existingEfficacy) {
+        const { error: efficacyError } = await supabase.from('rnc_efficacy').insert({ rnc_id: rncId });
+        if (efficacyError) throw efficacyError;
+      }
       toast.success('Implementação finalizada. Eficácia agendada.');
       queryClient.invalidateQueries({ queryKey: ['rnc-stages'] });
       queryClient.invalidateQueries({ queryKey: ['rnc-detail'] });
@@ -1384,14 +1407,23 @@ function EfficacyForm({ rncId, stageId, existing, user, queryClient }: any) {
         filePath = path;
       }
       if (existing) {
-        await supabase.from('rnc_efficacy').update({
+        const { error: efficacyError } = await supabase.from('rnc_efficacy').update({
           is_effective: isEffective, evidence, evaluated_by: user.id,
           evaluation_date: evaluationDate, evidence_file_path: filePath,
         }).eq('id', existing.id);
+        if (efficacyError) throw efficacyError;
+      } else {
+        const { error: efficacyError } = await supabase.from('rnc_efficacy').insert({
+          rnc_id: rncId, is_effective: isEffective, evidence, evaluated_by: user.id,
+          evaluation_date: evaluationDate, evidence_file_path: filePath,
+        });
+        if (efficacyError) throw efficacyError;
       }
       if (isEffective) {
-        await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
-        await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
+        const { error: stageError } = await supabase.from('rnc_stages').update({ status: 'concluido', completed_at: new Date().toISOString() }).eq('id', stageId);
+        if (stageError) throw stageError;
+        const { error: occurrenceError } = await supabase.from('rnc_occurrences').update({ status: 'concluida' }).eq('id', rncId);
+        if (occurrenceError) throw occurrenceError;
         toast.success('RNC concluída com eficácia!');
       } else {
         await supabase.from('rnc_stages').update({ status: 'reprovado', rejection_reason: evidence }).eq('id', stageId);
